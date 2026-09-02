@@ -1,0 +1,17 @@
+---
+description: Build meaningful features through acceptance criteria, failing tests, minimal code, and end-to-end verification
+alwaysApply: true
+---
+
+# Development cycle
+
+For meaningful behavior changes:
+
+1. **Specify** — agree on user-visible behavior, boundaries, and acceptance criteria. Save non-trivial specs in `docs/specs/`.
+2. **Test red** — turn one acceptance criterion into a focused automated test and run it to confirm the expected failure.
+3. **Code green** — implement only enough to pass that test.
+4. **Refactor** — simplify while tests stay green.
+5. **Verify** — run the full relevant suite and exercise the real user path when possible.
+6. **Document** — align README/specs with what actually works.
+
+Tiny copy or formatting changes may skip a new test, but existing checks must remain green. After three failed attempts at the same fix, stop patching and reconsider the approach from the last known-good state.

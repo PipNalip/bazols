@@ -1,0 +1,12 @@
+---
+description: Prefer the smallest proven solution and one owner for each concept
+alwaysApply: true
+---
+
+# Simplicity
+
+- Search the repository before adding a second implementation of an existing concept.
+- Prefer a maintained popular dependency for general-purpose problems, after checking its license, maintenance, and failure mode.
+- Build only what the accepted behavior needs now. Avoid infrastructure, flags, abstractions, and compatibility paths without a current caller and a removal condition.
+- Keep one source of truth for each rule, calculation, format, or state transition.
+- Avoid unrelated refactors and formatting churn.

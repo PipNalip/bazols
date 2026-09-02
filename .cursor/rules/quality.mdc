@@ -1,0 +1,14 @@
+---
+description: Keep tests meaningful, failures visible, and user-facing flows fully wired
+alwaysApply: true
+---
+
+# Quality
+
+- Test observable behavior, not private helpers or call counts alone.
+- Cover the normal path, one important edge case, and the error path.
+- Do not delete, weaken, or comment out a failing test to get green.
+- Fail visibly with an actionable message; never replace a real error with fake success or empty data.
+- Log the start and outcome of every external call without exposing secrets.
+- Before delivery, confirm the feature is reachable through its real entry point and that dependencies, routes, handlers, and configuration are connected.
+- Run the whole relevant suite before saying done.

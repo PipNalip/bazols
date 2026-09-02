@@ -1,0 +1,12 @@
+---
+description: Keep project purpose, run instructions, specs, and decisions discoverable and current
+alwaysApply: false
+---
+
+# Project memory
+
+- The root README must say what the product does, how to run it, and what remains unfinished.
+- Non-trivial feature contracts live in `docs/specs/` with observable acceptance criteria.
+- Record durable decisions with context and consequence; do not turn the README into a live task tracker.
+- Update docs when behavior, setup, configuration, or user-visible workflow changes.
+- Verify referenced paths and commands before publishing documentation.

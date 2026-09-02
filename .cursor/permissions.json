@@ -1,0 +1,14 @@
+{
+  "autoRun": {
+    "allow_instructions": [
+      "Read-only project inspection and running the documented local test or lint commands are normally safe."
+    ],
+    "block_instructions": [
+      "Ask before deleting or moving user files, wiping data, or overwriting a file the agent did not create.",
+      "Ask before rewriting Git history, force-pushing, deleting branches, or deleting tags.",
+      "Block reading, printing, copying, sourcing, or transmitting secret files such as .env, credentials, private keys, and tokens.",
+      "Ask before installing obscure dependencies or a large dependency set.",
+      "Ask before any paid call, cloud resource creation, message to a real person, payment, publication, push, or deployment."
+    ]
+  }
+}

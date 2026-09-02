@@ -1,0 +1,18 @@
+# Secret-bearing local files. This reduces exposure but is not a security boundary.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+credentials*.json
+secrets*.json
+service-account*.json
+id_rsa
+id_ed25519
+.netrc
+.npmrc
+.pypirc
+.cursor/mcp.json

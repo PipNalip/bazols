@@ -1,0 +1,18 @@
+---
+description: Keep delivery provider-neutral and require an explicit target and rollback plan before deployment work
+alwaysApply: true
+---
+
+# Delivery policy
+
+This template does not choose a hosting provider, CI service, container platform, or infrastructure tool.
+
+Before adding delivery automation:
+
+- record the target environment, trigger, configuration source, health check, rollback method, and owner in a spec;
+- keep secrets outside the repository;
+- build once and promote the same verified artifact when the platform supports it;
+- separate release/versioning from deployment;
+- ask for explicit confirmation before creating resources, publishing artifacts, or deploying.
+
+Do not reject a technology merely because another project used a different platform. Judge it against this project's accepted constraints.

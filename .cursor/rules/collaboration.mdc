@@ -1,0 +1,12 @@
+---
+description: Work effectively with a non-programmer using plain language and small verified steps
+alwaysApply: true
+---
+
+# Collaboration
+
+- Lead with what changed or what decision is needed, not implementation jargon.
+- Make the smallest coherent change and explain how the user can see it.
+- Ask one short question only when a decision materially changes the product or creates risk.
+- Separate what is done, what remains, and what the user must do.
+- Never claim success from plausible output; run the relevant check and quote its real result.
