@@ -1,8 +1,40 @@
-# Base Template
+# Bazols
 
-White-label набор правил и skills для безопасного вайбкодинга в Cursor и Hermes Agent, в том числе с моделями Codex. Он помогает AI-агенту сначала понять задачу, затем сделать минимальное изменение, проверить результат и объяснить его обычным языком.
+Внутренняя система отчётности ресторанов: API и web-интерфейс для отчётов по сотрудникам и товарам. Репозиторий развивается как TypeScript npm-workspace с NestJS API, React/MUI frontend и общими runtime-контрактами.
 
-Это не готовое приложение и не выбранный стек. Шаблон не навязывает язык, облако, issue tracker или способ деплоя.
+Сейчас реализован первый локальный сквозной срез: общий health-контракт, `GET /health/live` и стартовый web-экран. Production ещё не развёрнут; оставшиеся функции и инфраструктурные задачи перечислены в `docs/backlog.md` и спецификациях `docs/specs/`.
+
+## Локальный запуск
+
+Требуется Node.js 22 или новее.
+
+```sh
+npm install --include=dev
+cp .env.example .env
+# Замените все значения replace-with-* в локальном .env.
+npm run db:up
+npm run build
+npm run start --workspace @bazols/api
+```
+
+API будет доступен по `http://127.0.0.1:8000`; live-check — `/health/live`.
+
+Frontend для разработки запускается отдельно:
+
+```sh
+npm run dev --workspace @bazols/web
+```
+
+Локальная PostgreSQL слушает только `127.0.0.1`. Остановить контейнер можно командой `npm run db:down`; именованный volume с данными при этом сохраняется.
+
+## Проверка приложения
+
+```sh
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
 
 ## Что внутри
 
@@ -59,22 +91,21 @@ skills:
 
 Hermes не применяет `.cursor/permissions.json` и `.cursorignore`. Его разрешения и выбор локального или изолированного терминала задаются в профиле Hermes; [настройки approvals и terminal backend](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) описаны отдельно. Правило не показывать секреты есть в `AGENTS.md`, но ignore-файлы и текстовые инструкции не заменяют реальные права доступа. `.gitignore` продолжает действовать для Git, а `.dockerignore` — для Docker.
 
-## Проверка
+## Проверка исходного template-контракта
 
 ```sh
 sh scripts/validate-template.sh
 sh tests/test-template.sh
 ```
 
-## Что намеренно не включено
+## Что ещё не включено
 
-- starter-код Python/Node;
 - универсальный Dockerfile;
 - CI/CD и deployment scripts;
 - настройки конкретной Jira, GitHub, GitLab или облака;
 - автоматический push или публикация.
 
-Такие решения зависят от конкретного проекта и добавляются после явного выбора пользователя.
+Эти части добавляются по утверждённым спецификациям. Production deployment выполняется вручную с доверенной рабочей станции; GitHub не получает доступ в tailnet.
 
 ## Лицензия
 
