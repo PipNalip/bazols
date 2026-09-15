@@ -10,6 +10,9 @@
 
 ```sh
 npm install --include=dev
+cp .env.example .env
+# Замените все значения replace-with-* в локальном .env.
+npm run db:up
 npm run build
 npm run start --workspace @bazols/api
 ```
@@ -21,6 +24,8 @@ Frontend для разработки запускается отдельно:
 ```sh
 npm run dev --workspace @bazols/web
 ```
+
+Локальная PostgreSQL слушает только `127.0.0.1`. Остановить контейнер можно командой `npm run db:down`; именованный volume с данными при этом сохраняется.
 
 ## Проверка приложения
 
