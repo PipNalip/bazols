@@ -46,10 +46,12 @@ Build once and promote the same verified artifact when the selected platform sup
 Fill these as soon as the stack is selected. Until then, inspect the manifest and README; do not guess.
 
 ```text
-Install:    NOT_SELECTED
-Run:        NOT_SELECTED
-Test:       sh tests/test-template.sh
-Lint:       sh -n scripts/validate-template.sh tests/test-template.sh
+Install:    npm install --include=dev
+Run API:    npm run build && npm run start --workspace @bazols/api
+Run web:    npm run dev --workspace @bazols/web
+Test:       npm test && sh tests/test-template.sh
+Lint:       npm run lint && npm run typecheck
+Build:      npm run build
 Self-check: sh scripts/validate-template.sh
 ```
 
