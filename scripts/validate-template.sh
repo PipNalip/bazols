@@ -15,10 +15,14 @@ else
     printf 'WARN: no Python or Node runtime; permissions JSON was not parsed\n' >&2
 fi
 
-skill_count=0
-for file in .cursor/skills/*/SKILL.md; do
+cursor_skill_count=0
+hermes_skill_count=0
+for file in .cursor/skills/*/SKILL.md .agents/skills/*/SKILL.md; do
     [ -f "$file" ] || continue
-    skill_count=$((skill_count + 1))
+    case "$file" in
+        .cursor/*) cursor_skill_count=$((cursor_skill_count + 1)) ;;
+        .agents/*) hermes_skill_count=$((hermes_skill_count + 1)) ;;
+    esac
     folder=$(basename "$(dirname "$file")")
     grep -q "^name: $folder$" "$file" || {
         printf 'FAIL: skill name mismatch in %s\n' "$file" >&2
@@ -31,9 +35,9 @@ for file in .cursor/skills/*/SKILL.md; do
     }
 done
 
-[ "$skill_count" -gt 0 ] || {
-    printf 'FAIL: no skills found\n' >&2
+[ "$cursor_skill_count" -eq 7 ] && [ "$hermes_skill_count" -eq 11 ] || {
+    printf 'FAIL: expected 7 Cursor and 11 Hermes skills, found %s and %s\n' "$cursor_skill_count" "$hermes_skill_count" >&2
     exit 1
 }
 
-printf 'OK — base-template is healthy (%s skills checked)\n' "$skill_count"
+printf 'OK — base-template is healthy (%s Cursor and %s Hermes skills checked)\n' "$cursor_skill_count" "$hermes_skill_count"

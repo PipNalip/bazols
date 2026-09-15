@@ -8,6 +8,8 @@
 
 ### Added
 
+- Поддержка Hermes Agent: общий контракт в `AGENTS.md`, семь проектных процедур и четыре командных навыка в `.agents/skills/`.
+- Инструкция по подключению навыков в актуальном Hermes и в установленной v0.18.2; проверки совпадения процедур Cursor и Hermes.
 - Независимое white-label ядро для AI-assisted разработки.
 - Семь нейтральных Cursor rules, семь Agent Skills и четыре команды.
 - Защита секретов для Git, Cursor и Docker build context.

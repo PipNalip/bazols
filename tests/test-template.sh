@@ -75,6 +75,38 @@ for skill in idea-interview plan-review project-audit docs-writer ai-app-checkup
     validate_skill_frontmatter "$file" "$skill" || fail "$file has invalid or unsupported frontmatter"
 done
 
+for skill in idea-interview plan-review project-audit docs-writer ai-app-checkup deploy-readiness semver-bump check checkpoint explain release; do
+    file=".agents/skills/$skill/SKILL.md"
+    [ -f "$file" ] || { fail "missing Hermes skill $file"; continue; }
+    awk -v expected_name="$skill" '
+        NR == 1 { if ($0 != "---") bad = 1; next }
+        !closed && $0 == "---" { closed = 1; next }
+        closed { next }
+        $0 == "name: " expected_name { names++; next }
+        /^description: [^ ].+/ { descriptions++; next }
+        { bad = 1 }
+        END { exit !(closed && names == 1 && descriptions == 1 && !bad) }
+    ' "$file" || fail "$file has invalid Hermes frontmatter"
+done
+
+for skill in idea-interview plan-review project-audit docs-writer ai-app-checkup deploy-readiness semver-bump; do
+    cursor_file=".cursor/skills/$skill/SKILL.md"
+    hermes_file=".agents/skills/$skill/SKILL.md"
+    [ -f "$hermes_file" ] || continue
+    cursor_body=$(awk 'NR > 1 && /^---$/ { body = 1; next } body { print }' "$cursor_file")
+    hermes_body=$(awk 'NR > 1 && /^---$/ { body = 1; next } body { print }' "$hermes_file")
+    [ "$cursor_body" = "$hermes_body" ] || fail "$skill differs between Cursor and Hermes"
+done
+
+for skill in check checkpoint explain release; do
+    cursor_file=".cursor/commands/$skill.md"
+    hermes_file=".agents/skills/$skill/SKILL.md"
+    [ -f "$hermes_file" ] || continue
+    cursor_body=$(cat "$cursor_file")
+    hermes_body=$(awk 'NR > 1 && /^---$/ { body = 1; next } body { print }' "$hermes_file")
+    [ "$cursor_body" = "$hermes_body" ] || fail "$skill command differs between Cursor and Hermes"
+done
+
 for file in .gitignore .cursorignore .dockerignore; do
     for pattern in '.env' '*.pem' '*.key' 'credentials' 'service-account*.json' 'id_rsa' 'id_ed25519' '.npmrc' '.netrc'; do
         grep -Fq "$pattern" "$file" 2>/dev/null || fail "$file does not cover $pattern"
@@ -101,11 +133,22 @@ fi
 
 grep -q 'explicit confirmation' .cursor/commands/release.md 2>/dev/null \
     || fail 'release command must require explicit confirmation before push'
+grep -q 'explicit confirmation' .agents/skills/release/SKILL.md 2>/dev/null \
+    || fail 'Hermes release skill must require explicit confirmation before push'
 
 if grep -Eiq 'git[[:space:]]+push|gh[[:space:]]+release[[:space:]]+create|npm[[:space:]]+publish|docker[[:space:]]+push' \
     .cursor/commands/release.md; then
     fail 'release command must not embed an executable publication command'
 fi
+if grep -Eiq 'git[[:space:]]+push|gh[[:space:]]+release[[:space:]]+create|npm[[:space:]]+publish|docker[[:space:]]+push' \
+    .agents/skills/release/SKILL.md; then
+    fail 'Hermes release skill must not embed an executable publication command'
+fi
+
+grep -Fq 'After three failed attempts' AGENTS.md 2>/dev/null \
+    || fail 'AGENTS.md must carry the three-attempt rule for Hermes'
+grep -Fq '.agents/skills/' README.md 2>/dev/null \
+    || fail 'README must explain Hermes skills'
 
 grep -q '^MIT License$' LICENSE 2>/dev/null || fail 'LICENSE must be MIT'
 grep -q 'security boundary' README.md 2>/dev/null \
