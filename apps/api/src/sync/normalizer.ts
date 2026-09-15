@@ -78,3 +78,37 @@ export function normalizePage(response: EmployeeRatingResponse): NormalizedPage 
     items,
   };
 }
+
+export function normalizePages(responses: EmployeeRatingResponse[]): NormalizedPage {
+  const result: NormalizedPage = { employees: [], products: [], orders: [], items: [] };
+  const employeeIds = new Set<string>();
+  const orderIds = new Set<string>();
+  const itemIds = new Set<string>();
+  const products = new Map<string, NormalizedPage['products'][number]>();
+
+  for (const response of responses) {
+    const page = normalizePage(response);
+    for (const employee of page.employees) {
+      addUnique(employeeIds, employee.sourceId);
+      result.employees.push(employee);
+    }
+    for (const order of page.orders) {
+      addUnique(orderIds, order.sourceId);
+      result.orders.push(order);
+    }
+    for (const item of page.items) {
+      addUnique(itemIds, item.sourceId);
+      result.items.push(item);
+    }
+    for (const product of page.products) {
+      const existing = products.get(product.sourceId);
+      if (existing && existing.displayName !== product.displayName) {
+        throw new SourceError('SOURCE_DUPLICATE_ID');
+      }
+      products.set(product.sourceId, product);
+    }
+  }
+
+  result.products = [...products.values()];
+  return result;
+}

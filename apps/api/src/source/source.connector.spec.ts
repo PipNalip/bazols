@@ -83,12 +83,31 @@ describe('SourceConnector', () => {
   it.each([
     { repeatedPagination: true },
     { contradictoryPagination: true },
+    { duplicateOrderAcrossPages: true },
+    { duplicateItemAcrossPages: true },
   ])('fails closed on contradictory or repeated pagination: %o', async (options) => {
     const setup = await connector(options);
 
     await expect(
       setup.connector.collectReport({ ...request, pageSize: 1 }),
     ).rejects.toMatchObject({ code: 'SOURCE_PAGINATION_INVALID' });
+  });
+
+  it('exposes malformed raw page bytes to the snapshot hook before parsing fails', async () => {
+    const setup = await connector({
+      malformedRating: true,
+      responseSentinel: 'malformed-response-sentinel',
+    });
+    const captured: Buffer[] = [];
+
+    await expect(
+      setup.connector.collectReport(request, (page) => {
+        captured.push(page.body);
+      }),
+    ).rejects.toMatchObject({ code: 'SOURCE_CONTRACT_INVALID' });
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0]?.toString('utf8')).toContain('malformed-response-sentinel');
   });
 
   it('represents an empty successful result distinctly', async () => {

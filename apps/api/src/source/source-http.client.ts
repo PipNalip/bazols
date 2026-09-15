@@ -41,18 +41,10 @@ export class SourceHttpClient {
     }
 
     const baseFetch = options.fetch ?? globalThis.fetch;
-    const expectedOrigin = this.#baseUrl.origin;
     const guardedFetch: typeof fetch = async (input, init) => {
-      const requestUrl = new URL(
-        typeof input === 'string' || input instanceof URL ? input : input.url,
-      );
       const response = await baseFetch(input, { ...init, redirect: 'manual' });
-      const location = response.headers.get('location');
-      if (isRedirect(response) && location) {
-        const redirectUrl = new URL(location, requestUrl);
-        if (redirectUrl.origin !== expectedOrigin) {
-          throw new SourceError('SOURCE_REDIRECT_BLOCKED');
-        }
+      if (isRedirect(response)) {
+        throw new SourceError('SOURCE_REDIRECT_BLOCKED');
       }
       return response;
     };
