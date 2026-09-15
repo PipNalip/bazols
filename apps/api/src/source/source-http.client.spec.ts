@@ -110,6 +110,21 @@ describe('SourceHttpClient read-only boundary', () => {
     expect(transport).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects same-origin redirects to paths outside the allowlist', async () => {
+    const transport = vi.fn(async () =>
+      new Response(null, {
+        status: 302,
+        headers: { location: '/Internal/DeleteEverything' },
+      }),
+    );
+    const client = clientWith(transport as typeof fetch);
+
+    await expect(
+      client.execute({ kind: 'permissions' }, 'correlation-same-origin-redirect'),
+    ).rejects.toMatchObject({ code: 'SOURCE_REDIRECT_BLOCKED' });
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
   it('reports only endpoint key and correlation ID on transport failure', async () => {
     const transport = vi.fn(async () => {
       const response = new Response('response-pii-sentinel', {

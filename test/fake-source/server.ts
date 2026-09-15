@@ -5,7 +5,10 @@ import { join } from 'node:path';
 export type FakeSourceOptions = {
   authFailure?: boolean;
   contradictoryPagination?: boolean;
+  duplicateItemAcrossPages?: boolean;
+  duplicateOrderAcrossPages?: boolean;
   empty?: boolean;
+  malformedRating?: boolean;
   repeatedPagination?: boolean;
   responseSentinel?: string;
 };
@@ -108,17 +111,44 @@ export async function startFakeSource(
         return;
       }
 
+      if (options.malformedRating) {
+        sendJson(response, 200, {
+          isSuccess: true,
+          responseSentinel: options.responseSentinel,
+          data: { totalRows: 1, rows: [{ id: 'malformed-employee' }] },
+        });
+        return;
+      }
+
       const start = options.repeatedPagination && page > 1 ? 0 : (page - 1) * pageSize;
       const totalRows =
         options.contradictoryPagination && page > 1
           ? ratingFixture.data.totalRows + 1
           : ratingFixture.data.totalRows;
+      const rows = structuredClone(ratingFixture.data.rows.slice(start, start + pageSize)) as Array<{
+        orders?: Array<{ id: string; items?: Array<{ id: string }> }>;
+      }>;
+      if (page > 1 && rows[0]?.orders?.[0]) {
+        const firstFixtureRow = ratingFixture.data.rows[0] as {
+          orders?: Array<{ id: string; items?: Array<{ id: string }> }>;
+        };
+        if (options.duplicateOrderAcrossPages && firstFixtureRow.orders?.[0]) {
+          rows[0].orders[0].id = firstFixtureRow.orders[0].id;
+        }
+        if (
+          options.duplicateItemAcrossPages &&
+          rows[0].orders[0].items?.[0] &&
+          firstFixtureRow.orders?.[0]?.items?.[0]
+        ) {
+          rows[0].orders[0].items[0].id = firstFixtureRow.orders[0].items[0].id;
+        }
+      }
       sendJson(response, 200, {
         ...ratingFixture,
         data: {
           ...ratingFixture.data,
           totalRows,
-          rows: ratingFixture.data.rows.slice(start, start + pageSize),
+          rows,
         },
       });
       return;

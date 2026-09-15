@@ -26,6 +26,9 @@ export type CollectedPage = {
   response: EmployeeRatingResponse;
 };
 
+export type RawCollectedPage = Omit<CollectedPage, 'response'>;
+export type RawPageHook = (page: RawCollectedPage) => void | Promise<void>;
+
 export type CollectedReport = {
   kind: 'data' | 'empty';
   pages: CollectedPage[];
@@ -51,7 +54,10 @@ export class SourceConnector {
     private readonly credentials: SourceCredentials,
   ) {}
 
-  async collectReport(request: CollectReportRequest): Promise<CollectedReport> {
+  async collectReport(
+    request: CollectReportRequest,
+    onRawPage?: RawPageHook,
+  ): Promise<CollectedReport> {
     const authentication = await this.client.execute(
       { kind: 'authenticate', ...this.credentials },
       request.correlationId,
@@ -84,10 +90,13 @@ export class SourceConnector {
     );
     parseSuccessfulResponse(decodeJson(roleResult));
 
-    return this.#collectPages(request);
+    return this.#collectPages(request, onRawPage);
   }
 
-  async #collectPages(request: CollectReportRequest): Promise<CollectedReport> {
+  async #collectPages(
+    request: CollectReportRequest,
+    onRawPage?: RawPageHook,
+  ): Promise<CollectedReport> {
     if (!Number.isInteger(request.pageSize) || request.pageSize < 1) {
       throw new SourceError(
         'SOURCE_PAGINATION_INVALID',
@@ -98,6 +107,9 @@ export class SourceConnector {
 
     const pages: CollectedPage[] = [];
     const employeeIds = new Set<string>();
+    const orderIds = new Set<string>();
+    const itemIds = new Set<string>();
+    const productNames = new Map<string, string>();
     let expectedTotal: number | undefined;
     let collectedRows = 0;
 
@@ -112,6 +124,7 @@ export class SourceConnector {
         },
         request.correlationId,
       );
+      await onRawPage?.({ body: raw.body, contentType: raw.contentType, page });
       const response = parseEmployeeRatingResponse(decodeJson(raw));
       expectedTotal ??= response.data.totalRows;
 
@@ -136,6 +149,37 @@ export class SourceConnector {
           );
         }
         employeeIds.add(employee.id);
+
+        for (const order of employee.orders) {
+          if (orderIds.has(order.id)) {
+            throw new SourceError(
+              'SOURCE_PAGINATION_INVALID',
+              'employeeRating',
+              request.correlationId,
+            );
+          }
+          orderIds.add(order.id);
+
+          for (const item of order.items) {
+            if (itemIds.has(item.id)) {
+              throw new SourceError(
+                'SOURCE_PAGINATION_INVALID',
+                'employeeRating',
+                request.correlationId,
+              );
+            }
+            itemIds.add(item.id);
+            const existingName = productNames.get(item.product.id);
+            if (existingName !== undefined && existingName !== item.product.name) {
+              throw new SourceError(
+                'SOURCE_PAGINATION_INVALID',
+                'employeeRating',
+                request.correlationId,
+              );
+            }
+            productNames.set(item.product.id, item.product.name);
+          }
+        }
       }
 
       collectedRows += response.data.rows.length;
