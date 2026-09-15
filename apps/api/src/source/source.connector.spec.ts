@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { startFakeSource, type FakeSource } from '../../../../test/fake-source/server.js';
 import { SourceConnector } from './source.connector.js';
+import { SourceConnectorFactory } from './source-connector.factory.js';
 import { SourceHttpClient } from './source-http.client.js';
 
 const unitId = '10000000-0000-4000-8000-000000000001';
@@ -36,6 +37,31 @@ afterEach(async () => {
 });
 
 describe('SourceConnector', () => {
+  it('creates a fresh connector and cookie jar for every operation', () => {
+    const factory = new SourceConnectorFactory({
+      baseUrl: 'https://source.example.invalid',
+      login: 'source-login',
+      password: 'source-password',
+      allowInsecureForTests: false,
+    });
+
+    expect(factory.create()).not.toBe(factory.create());
+  });
+
+  it('discovers only safe unit and role metadata through GET requests', async () => {
+    const setup = await connector();
+
+    const units = await setup.connector.discover('correlation-discovery');
+
+    expect(units).toEqual([
+      {
+        id: unitId,
+        roles: ['SYNTHETIC_REPORT_VIEWER'],
+      },
+    ]);
+    expect(setup.source.calls).toEqual(['authenticate', 'permissions']);
+  });
+
   it('collects a complete validated report in restaurant context', async () => {
     const setup = await connector();
 

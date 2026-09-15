@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "start": "node --env-file-if-exists=../../.env dist/main.js"
+    "start": "node --env-file-if-exists=../../.env dist/main.js",
+    "start:worker": "node --env-file-if-exists=../../.env dist/worker.js",
+    "create-admin": "node --env-file-if-exists=../../.env dist/create-admin.js"
   },
   "dependencies": {
     "@bazols/contracts": "^0.1.0",
@@ -14,6 +16,7 @@
     "@nestjs/core": "^12.0.3",
     "@nestjs/platform-express": "^12.0.3",
     "@prisma/client": "6.12.0",
+    "argon2": "^0.45.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "fetch-cookie": "^3.2.0",
@@ -24,6 +27,7 @@
   },
   "devDependencies": {
     "@nestjs/testing": "^12.0.3",
+    "@types/express": "^5.0.6",
     "@types/supertest": "^7.2.1",
     "supertest": "^7.2.2"
   }

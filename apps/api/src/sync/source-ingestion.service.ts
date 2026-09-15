@@ -9,6 +9,7 @@ export type SourceIngestionInput = CollectReportRequest & {
   syncRunId: string;
   restaurantId: string;
   timezone: string;
+  markSucceeded?: boolean;
 };
 
 export class SourceIngestionService {
@@ -32,6 +33,7 @@ export class SourceIngestionService {
       endDate: input.endDate,
       timezone: input.timezone,
       pages,
+      ...(input.markSucceeded ? { markSucceeded: true } : {}),
     });
     return report;
   }

@@ -1,6 +1,8 @@
 import { addDays, format, isValid, parseISO } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
+import { Prisma } from '@prisma/client';
 
+import { ApplicationError } from '../common/application.error.js';
 import type { PrismaService } from '../db/prisma.service.js';
 import { SourceError } from '../source/source.errors.js';
 import { parseEmployeeRatingResponse } from '../source/source.schemas.js';
@@ -19,6 +21,7 @@ export type ImportRunInput = {
   endDate: string;
   timezone: string;
   pages: RawImportPage[];
+  markSucceeded?: boolean;
 };
 
 type RunIdentity = Pick<ImportRunInput, 'syncRunId' | 'restaurantId'>;
@@ -91,6 +94,23 @@ export class ImportPageService {
     bounds: { begin: Date; endExclusive: Date },
   ): Promise<void> {
     await this.prisma.$transaction(async (transaction) => {
+      let lockedRun: { id: string; requestedById: string; restaurantId: string } | undefined;
+      if (input.markSucceeded) {
+        const rows = await transaction.$queryRaw<
+          Array<{ id: string; requestedById: string; restaurantId: string; status: string }>
+        >(Prisma.sql`
+          SELECT id, "requestedById", "restaurantId", status::text AS status
+          FROM "SyncRun"
+          WHERE id = ${input.syncRunId}::uuid
+          FOR UPDATE
+        `);
+        const run = rows[0];
+        if (!run || run.status !== 'RUNNING' || run.restaurantId !== input.restaurantId) {
+          throw new ApplicationError('SYNC_INVALID_TRANSITION', 409);
+        }
+        lockedRun = run;
+      }
+
       const period = {
         restaurantId: input.restaurantId,
         occurredAt: { gte: bounds.begin, lt: bounds.endExclusive },
@@ -110,8 +130,22 @@ export class ImportPageService {
             productsCount: 0,
             ordersCount: 0,
             orderItemsCount: 0,
+            ...(input.markSucceeded
+              ? { status: 'SUCCEEDED' as const, finishedAt: new Date(), safeErrorCode: null }
+              : {}),
           },
         });
+        if (lockedRun) {
+          await transaction.auditEvent.create({
+            data: {
+              actorId: lockedRun.requestedById,
+              eventType: 'SYNC_SUCCEEDED',
+              restaurantId: lockedRun.restaurantId,
+              syncRunId: lockedRun.id,
+              correlationId: `worker:${lockedRun.id}`,
+            },
+          });
+        }
         return;
       }
 
@@ -248,8 +282,22 @@ export class ImportPageService {
           productsCount: normalized.products.length,
           ordersCount: normalized.orders.length,
           orderItemsCount: normalized.items.length,
+          ...(input.markSucceeded
+            ? { status: 'SUCCEEDED' as const, finishedAt: new Date(), safeErrorCode: null }
+            : {}),
         },
       });
+      if (lockedRun) {
+        await transaction.auditEvent.create({
+          data: {
+            actorId: lockedRun.requestedById,
+            eventType: 'SYNC_SUCCEEDED',
+            restaurantId: lockedRun.restaurantId,
+            syncRunId: lockedRun.id,
+            correlationId: `worker:${lockedRun.id}`,
+          },
+        });
+      }
     }, {
       maxWait: TRANSACTION_MAX_WAIT_MS,
       timeout: TRANSACTION_TIMEOUT_MS,

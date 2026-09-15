@@ -79,6 +79,22 @@ Manual sync request       Node.js worker
 
 API не выполняет долгую синхронизацию внутри HTTP-запроса. Оно создаёт запись `SyncRun` со статусом `queued`. Worker забирает задания из PostgreSQL. Redis и внешний брокер очередей в MVP не нужны.
 
+### 4.1. Контракт API и процессов этапа синхронизации
+
+| Поверхность | Доступ | Назначение |
+|---|---|---|
+| `POST /api/auth/login` | same-origin, rate-limited | Создать server-side session и вернуть CSRF token |
+| `GET /api/auth/me` / `POST /api/auth/logout` | authenticated; logout также CSRF | Восстановить frontend auth state / отозвать session |
+| `POST /api/sync-runs` | ADMIN + Origin + CSRF | Создать `queued` запуск; конфликт при другом active run ресторана |
+| `GET /api/sync-runs`, `GET /api/sync-runs/:id` | ADMIN | Читать status, counters и только безопасный error code |
+| `GET /api/source-discovery` | ADMIN | Прочитать только source unit IDs и roles |
+| `/api/restaurants*`, `/api/users*` | authenticated; mutations ADMIN + Origin + CSRF | Mapping ресторанов и lifecycle менеджеров |
+| `npm run start:worker --workspace @bazols/api` | отдельный процесс | Claim, heartbeat, import и terminal state/audit |
+
+Opaque session token существует только в cookie клиента; PostgreSQL хранит его HMAC-SHA256 hash. Cookie имеет `HttpOnly`, `SameSite=Lax`, а в Production также `Secure`. CSRF token детерминированно выводится через HMAC из opaque session token и сравнивается constant-time. Блокировка или reset пароля отзывают активные sessions пользователя.
+
+Queue claim выполняется guarded state transition `QUEUED → RUNNING`; partial unique index разрешает не более одного `QUEUED/RUNNING` запуска на ресторан. Worker не имеет duration timeout: во время активной работы он обновляет heartbeat, а отсутствие heartbeat более 15 минут переводит запуск в `FAILED`. Terminal state и соответствующий safe audit event записываются одной транзакцией.
+
 ## 6. Требования
 
 ### REQ-001 — авторизация приложения

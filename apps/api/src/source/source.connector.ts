@@ -35,6 +35,11 @@ export type CollectedReport = {
   totalRows: number;
 };
 
+export type DiscoveredSourceUnit = {
+  id: string;
+  roles: string[];
+};
+
 type SourceCredentials = {
   login: string;
   password: string;
@@ -54,21 +59,19 @@ export class SourceConnector {
     private readonly credentials: SourceCredentials,
   ) {}
 
+  async discover(correlationId: string): Promise<DiscoveredSourceUnit[]> {
+    const permissions = await this.#permissions(correlationId);
+    return permissions.data.units.map((unit) => ({
+      id: unit.id,
+      roles: [...unit.roles],
+    }));
+  }
+
   async collectReport(
     request: CollectReportRequest,
     onRawPage?: RawPageHook,
   ): Promise<CollectedReport> {
-    const authentication = await this.client.execute(
-      { kind: 'authenticate', ...this.credentials },
-      request.correlationId,
-    );
-    parseSuccessfulResponse(decodeJson(authentication));
-
-    const permissionsResult = await this.client.execute(
-      { kind: 'permissions' },
-      request.correlationId,
-    );
-    const permissions = parsePermissionsResponse(decodeJson(permissionsResult));
+    const permissions = await this.#permissions(request.correlationId);
     const unit = permissions.data.units.find(
       (candidate) => candidate.id === request.sourceUnitId,
     );
@@ -91,6 +94,20 @@ export class SourceConnector {
     parseSuccessfulResponse(decodeJson(roleResult));
 
     return this.#collectPages(request, onRawPage);
+  }
+
+  async #permissions(correlationId: string) {
+    const authentication = await this.client.execute(
+      { kind: 'authenticate', ...this.credentials },
+      correlationId,
+    );
+    parseSuccessfulResponse(decodeJson(authentication));
+
+    const permissionsResult = await this.client.execute(
+      { kind: 'permissions' },
+      correlationId,
+    );
+    return parsePermissionsResponse(decodeJson(permissionsResult));
   }
 
   async #collectPages(

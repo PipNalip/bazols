@@ -2,7 +2,7 @@
 
 Внутренняя система отчётности ресторанов: API и web-интерфейс для отчётов по сотрудникам и товарам. Репозиторий развивается как TypeScript npm-workspace с NestJS API, React/MUI frontend и общими runtime-контрактами.
 
-Сейчас реализованы локальный health-срез и внутренний pipeline интеграции с источником: GET-only клиент с cookie-сессией и полным запретом redirect, строгая проверка ответов и пагинации, snapshot-first шифрование raw responses и атомарная идемпотентная нормализация полного запуска в PostgreSQL с учётом timezone ресторана. Pipeline пока не запускается через API: очередь и worker добавляются следующим этапом. Production ещё не развёрнут; оставшиеся функции и инфраструктурные задачи перечислены в `docs/backlog.md` и спецификациях `docs/specs/`.
+Сейчас реализованы health-срез, безопасная интеграция с источником, DB-backed очередь и worker, ручной admin-only sync API, Argon2id login с server-side sessions/CSRF, роли и администрирование менеджеров и ресторанов. Raw responses шифруются до записи, а полный импорт нормализованных данных атомарен и идемпотентен. Reports API и рабочий frontend ещё не реализованы; Production не развёрнут. Оставшиеся функции и инфраструктурные задачи перечислены в `docs/backlog.md` и спецификациях `docs/specs/`.
 
 ## Локальный запуск
 
@@ -11,7 +11,12 @@
 ```sh
 npm install --include=dev
 cp .env.example .env
-# Замените все значения replace-with-* в локальном .env.
+# Замените одинаковым локальным паролем значение
+# replace-with-a-local-database-password в POSTGRES_PASSWORD и DATABASE_URL.
+# Сгенерируйте отдельные секреты и вставьте их в .env:
+#   openssl rand -hex 32      # SESSION_SECRET
+#   openssl rand -base64 32   # RAW_DATA_ENCRYPTION_KEY
+# Замените остальные значения replace-with-*.
 npm run db:up
 npm run db:migrate
 npm run build
@@ -19,6 +24,32 @@ npm run start --workspace @bazols/api
 ```
 
 API будет доступен по `http://127.0.0.1:8000`; live-check — `/health/live`.
+
+В отдельном процессе запустите worker:
+
+```sh
+npm run start:worker --workspace @bazols/api
+```
+
+Первого администратора создайте после миграций. Пароль читается только из stdin и не выводится:
+
+```sh
+read -rsp 'Temporary admin password: ' BAZOLS_ADMIN_PASSWORD; echo
+printf '%s' "$BAZOLS_ADMIN_PASSWORD" | npm run create-admin --workspace @bazols/api -- admin
+unset BAZOLS_ADMIN_PASSWORD
+```
+
+`APP_ORIGIN` в `.env` должен точно совпадать с origin браузерного frontend. В Production допускается только HTTPS origin; session cookie автоматически получает `Secure`.
+
+Реализованные API-маршруты этапа 2:
+
+- `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`;
+- `POST /api/sync-runs`, `GET /api/sync-runs`, `GET /api/sync-runs/:id`;
+- `GET /api/source-discovery`;
+- `GET|POST /api/restaurants`, `PATCH /api/restaurants/:id`;
+- `GET|POST /api/users`, `POST /api/users/:id/block`, `POST /api/users/:id/reset-password`, `PUT /api/users/:id/restaurants`.
+
+Все state-changing запросы после login требуют session cookie, точный `Origin` и `X-CSRF-Token` из login/`GET /api/auth/me`.
 
 Frontend для разработки запускается отдельно:
 
