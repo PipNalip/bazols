@@ -1,0 +1,116 @@
+{
+  "isSuccess": true,
+  "data": {
+    "totalRows": 2,
+    "rows": [
+      {
+        "id": "20000000-0000-4000-8000-000000000001",
+        "displayName": "Synthetic Employee Alpha",
+        "phone": "+1 202-555-0101",
+        "email": "employee.alpha@example.invalid",
+        "orders": [
+          {
+            "id": "30000000-0000-4000-8000-000000000001",
+            "date": "2026-09-01T10:00:00.000Z",
+            "price": {
+              "value": "100.00",
+              "currency": "RUB"
+            },
+            "customer": {
+              "phone": "+1 202-555-0111",
+              "email": "customer.one@example.invalid"
+            },
+            "items": [
+              {
+                "id": "40000000-0000-4000-8000-000000000001",
+                "product": {
+                  "id": "50000000-0000-4000-8000-000000000001",
+                  "name": "Synthetic Tea"
+                },
+                "productPrice": {
+                  "value": "60.00",
+                  "currency": "RUB"
+                },
+                "priceWithDiscountForOrder": {
+                  "value": "50.00",
+                  "currency": "RUB"
+                }
+              },
+              {
+                "id": "40000000-0000-4000-8000-000000000002",
+                "product": {
+                  "id": "50000000-0000-4000-8000-000000000002",
+                  "name": "Synthetic Cake"
+                },
+                "productPrice": {
+                  "value": "50.00",
+                  "currency": "RUB"
+                },
+                "priceWithDiscountForOrder": {
+                  "value": "50.00",
+                  "currency": "RUB"
+                }
+              }
+            ]
+          },
+          {
+            "id": "30000000-0000-4000-8000-000000000002",
+            "date": "2026-09-02T10:00:00.000Z",
+            "price": {
+              "value": "50.00",
+              "currency": "RUB"
+            },
+            "items": [
+              {
+                "id": "40000000-0000-4000-8000-000000000003",
+                "product": {
+                  "id": "50000000-0000-4000-8000-000000000001",
+                  "name": "Synthetic Tea"
+                },
+                "productPrice": {
+                  "value": "50.00",
+                  "currency": "RUB"
+                },
+                "priceWithDiscountForOrder": {
+                  "value": "50.00",
+                  "currency": "RUB"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "20000000-0000-4000-8000-000000000002",
+        "displayName": "Synthetic Employee Beta",
+        "orders": [
+          {
+            "id": "30000000-0000-4000-8000-000000000003",
+            "date": "2026-09-03T10:00:00.000Z",
+            "price": {
+              "value": "150.00",
+              "currency": "RUB"
+            },
+            "items": [
+              {
+                "id": "40000000-0000-4000-8000-000000000004",
+                "product": {
+                  "id": "50000000-0000-4000-8000-000000000002",
+                  "name": "Synthetic Cake"
+                },
+                "productPrice": {
+                  "value": "170.00",
+                  "currency": "RUB"
+                },
+                "priceWithDiscountForOrder": {
+                  "value": "150.00",
+                  "currency": "RUB"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
