@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+}
+
+enum SyncRunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model User {
+  id             String           @id @default(uuid()) @db.Uuid
+  username       String           @unique
+  passwordHash   String
+  role           UserRole
+  active         Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  sessions       Session[]
+  restaurants    UserRestaurant[]
+  requestedSyncs SyncRun[]
+  auditEvents    AuditEvent[]
+}
+
+model Session {
+  id        String    @id @default(uuid()) @db.Uuid
+  tokenHash String    @unique
+  userId    String    @db.Uuid
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Restaurant {
+  id           String           @id @default(uuid()) @db.Uuid
+  sourceUnitId String           @unique
+  sourceRole   String
+  timezone     String
+  displayName  String
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  users        UserRestaurant[]
+  syncRuns     SyncRun[]
+  snapshots    RawSnapshot[]
+  employees    Employee[]
+  products     Product[]
+  orders       Order[]
+  orderItems   OrderItem[]
+  auditEvents  AuditEvent[]
+}
+
+model UserRestaurant {
+  userId       String     @db.Uuid
+  restaurantId String     @db.Uuid
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@id([userId, restaurantId])
+  @@index([restaurantId])
+}
+
+model SyncRun {
+  id                 String        @id @default(uuid()) @db.Uuid
+  restaurantId       String        @db.Uuid
+  beginDate          DateTime      @db.Date
+  endDate            DateTime      @db.Date
+  status             SyncRunStatus
+  requestedById      String        @db.Uuid
+  employeesCount     Int           @default(0)
+  ordersCount        Int           @default(0)
+  productsCount      Int           @default(0)
+  orderItemsCount    Int           @default(0)
+  safeErrorCode      String?
+  heartbeatAt        DateTime?
+  startedAt          DateTime?
+  finishedAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  restaurant         Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  requestedBy        User          @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+  snapshots          RawSnapshot[]
+  lastSeenOrders     Order[]       @relation("OrderLastSeenSync")
+  lastSeenOrderItems OrderItem[]   @relation("OrderItemLastSeenSync")
+  auditEvents        AuditEvent[]
+
+  @@unique([restaurantId, id])
+  @@index([requestedById])
+  @@index([restaurantId, createdAt])
+}
+
+model RawSnapshot {
+  id               String     @id @default(uuid()) @db.Uuid
+  syncRunId        String     @db.Uuid
+  restaurantId     String     @db.Uuid
+  endpoint         String
+  page             Int
+  contentType      String
+  algorithmVersion Int
+  ciphertext       Bytes
+  iv               Bytes
+  authTag          Bytes
+  receivedAt       DateTime   @default(now())
+  syncRun          SyncRun    @relation(fields: [restaurantId, syncRunId], references: [restaurantId, id], onDelete: Cascade)
+  restaurant       Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+
+  @@index([syncRunId])
+  @@index([restaurantId, receivedAt])
+}
+
+model Employee {
+  id           String     @id @default(uuid()) @db.Uuid
+  restaurantId String     @db.Uuid
+  sourceId     String
+  displayName  String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  orders       Order[]
+
+  @@unique([restaurantId, sourceId])
+  @@unique([restaurantId, id])
+}
+
+model Product {
+  id           String      @id @default(uuid()) @db.Uuid
+  restaurantId String      @db.Uuid
+  sourceId     String
+  displayName  String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  orderItems   OrderItem[]
+
+  @@unique([restaurantId, sourceId])
+  @@unique([restaurantId, id])
+}
+
+model Order {
+  id                String      @id @default(uuid()) @db.Uuid
+  restaurantId      String      @db.Uuid
+  sourceId          String
+  employeeId        String      @db.Uuid
+  occurredAt        DateTime
+  price             Decimal     @db.Decimal(14, 2)
+  currency          String
+  isCurrent         Boolean     @default(true)
+  lastSeenSyncRunId String      @db.Uuid
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  restaurant        Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  employee          Employee    @relation(fields: [restaurantId, employeeId], references: [restaurantId, id], onDelete: Restrict)
+  lastSeenSyncRun   SyncRun     @relation("OrderLastSeenSync", fields: [restaurantId, lastSeenSyncRunId], references: [restaurantId, id], onDelete: Restrict)
+  items             OrderItem[]
+
+  @@unique([restaurantId, sourceId])
+  @@unique([restaurantId, id])
+  @@index([restaurantId, occurredAt])
+  @@index([lastSeenSyncRunId])
+}
+
+model OrderItem {
+  id                        String     @id @default(uuid()) @db.Uuid
+  restaurantId              String     @db.Uuid
+  sourceId                  String
+  orderId                   String     @db.Uuid
+  productId                 String     @db.Uuid
+  priceWithDiscountForOrder Decimal    @db.Decimal(14, 2)
+  currency                  String
+  isCurrent                 Boolean    @default(true)
+  lastSeenSyncRunId         String     @db.Uuid
+  createdAt                 DateTime   @default(now())
+  updatedAt                 DateTime   @updatedAt
+  restaurant                Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  order                     Order      @relation(fields: [restaurantId, orderId], references: [restaurantId, id], onDelete: Restrict)
+  product                   Product    @relation(fields: [restaurantId, productId], references: [restaurantId, id], onDelete: Restrict)
+  lastSeenSyncRun           SyncRun    @relation("OrderItemLastSeenSync", fields: [restaurantId, lastSeenSyncRunId], references: [restaurantId, id], onDelete: Restrict)
+
+  @@unique([restaurantId, sourceId])
+  @@index([restaurantId, productId])
+  @@index([lastSeenSyncRunId])
+}
+
+model AuditEvent {
+  id            String      @id @default(uuid()) @db.Uuid
+  actorId       String?     @db.Uuid
+  eventType     String
+  restaurantId  String?     @db.Uuid
+  syncRunId     String?     @db.Uuid
+  correlationId String
+  safeMetadata  Json?
+  createdAt     DateTime    @default(now())
+  actor         User?       @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+  syncRun       SyncRun?    @relation(fields: [syncRunId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([restaurantId, createdAt])
+  @@index([syncRunId])
+  @@index([correlationId])
+}

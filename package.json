@@ -11,11 +11,14 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run prisma:generate && npm run build --workspaces --if-present",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
     "db:up": "docker compose up -d --wait postgres",
+    "db:migrate": "prisma migrate deploy",
     "db:down": "docker compose down"
   },
   "devDependencies": {
@@ -24,8 +27,12 @@
     "eslint": "^10.10.0",
     "globals": "^17.12.0",
     "prettier": "^3.9.6",
+    "prisma": "6.12.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.0",
     "vitest": "^5.0.1"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.12.0"
   }
 }
