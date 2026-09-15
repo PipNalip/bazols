@@ -13,6 +13,7 @@ npm install --include=dev
 cp .env.example .env
 # Замените все значения replace-with-* в локальном .env.
 npm run db:up
+npm run db:migrate
 npm run build
 npm run start --workspace @bazols/api
 ```
