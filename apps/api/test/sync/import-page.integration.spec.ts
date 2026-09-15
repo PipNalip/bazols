@@ -132,6 +132,33 @@ afterAll(async () => {
 });
 
 describe('ImportPageService', () => {
+  it('fences a recovered worker before it can persist normalized data', async () => {
+    const context = await createContext();
+    await prisma.syncRun.update({
+      where: { id: context.syncRunId },
+      data: { status: 'FAILED', safeErrorCode: 'SYNC_STALE_HEARTBEAT' },
+    });
+
+    await expect(
+      service().importRun({
+        ...context,
+        beginDate: '2026-09-01',
+        endDate: '2026-09-30',
+        timezone: 'UTC',
+        pages: [
+          {
+            endpoint: 'employeeRating',
+            page: 1,
+            contentType: 'application/json',
+            body: body(fixture()),
+          },
+        ],
+        markSucceeded: true,
+      }),
+    ).rejects.toMatchObject({ code: 'SYNC_INVALID_TRANSITION' });
+    await expect(prisma.order.count({ where: { restaurantId: context.restaurantId } })).resolves.toBe(0);
+  });
+
   it('creates expected counts and a second import does not inflate them', async () => {
     const context = await createContext();
     const importer = service();
