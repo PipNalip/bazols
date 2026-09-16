@@ -1,0 +1,16 @@
+{
+  "isSuccess": true,
+  "data": {
+    "cards": [
+      {
+        "datePeriod": "01.09.2026 - 30.09.2026",
+        "isActive": true,
+        "isActiveCurrentCard": true,
+        "isDeactivated": false,
+        "calculationItems": [],
+        "packingItems": []
+      }
+    ],
+    "totalrows": 1
+  }
+}

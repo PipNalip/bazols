@@ -12,30 +12,121 @@ const expectedFixtureNames = [
   'employees-rating.empty.json',
   'employees-rating.invalid.json',
   'employees-rating.success.json',
+  'material-costs.empty.json',
+  'material-costs.success.json',
+  'material-supplies.empty.json',
+  'material-supplies.success.json',
+  'permissions.current.json',
   'permissions.success.json',
+  'product-costs.empty.json',
+  'product-costs.success.json',
+  'product-technical-card-summary.success.json',
+  'production-materials.success.json',
+  'products.empty.json',
+  'products.invalid.json',
+  'products.success.json',
+  'supply-departments.empty.json',
+  'supply-departments.success.json',
+  'technical-cards.empty.json',
+  'technical-cards.invalid.json',
+  'technical-cards.success.json',
 ];
 const allowedKeys = new Set([
+  'Data',
+  'DepartmentId',
+  'Disabled',
+  'Errors',
+  'Group',
+  'Id',
+  'IsFailed',
+  'IsSuccess',
+  'Items',
+  'MaterialId',
+  'MaterialName',
+  'MaterialSupplies',
+  'Metrics',
+  'Price',
+  'Selected',
+  'SupplyDateTime',
+  'Tax',
+  'Text',
+  'TotalRows',
+  'UnitId',
+  'UnitOfMeasure',
+  'Value',
+  'WarningEntries',
+  'Warnings',
+  'areTechnicalCardsExists',
+  'autoCost',
+  'autoCostMaterialViews',
+  'autoCostMaterialViewsByDates',
+  'autoCostProductByTradeArea',
+  'autoCostProductByUnit',
+  'averageAutoCost',
+  'calculationItems',
+  'cards',
+  'category',
   'currency',
   'customer',
   'data',
   'date',
+  'datePeriod',
+  'departmentId',
   'displayName',
   'email',
+  'errors',
+  'extraCharge',
+  'fc',
   'id',
+  'isActive',
+  'isActiveCurrentCard',
+  'isDeactivated',
+  'isFailed',
+  'isRemoved',
   'isSuccess',
+  'isTotalCost',
   'items',
+  'lossMaterialQuantityToString',
+  'materialCategory',
+  'materialId',
+  'materialIsRemoved',
+  'materialName',
+  'materialType',
+  'materialUnitOfMeasure',
   'name',
+  'nameDepartment',
+  'nameUnit',
+  'needToPrepare',
+  'netWeight',
+  'netWeightUnitOfMeasure',
   'orders',
+  'packingItems',
+  'permissions',
   'phone',
   'price',
   'priceWithDiscountForOrder',
   'product',
+  'productId',
+  'productName',
   'productPrice',
+  'productType',
+  'productUnitOfMeasure',
+  'productionMaterialQuantityToString',
   'roles',
   'rows',
+  'text',
   'totalRows',
+  'totalrows',
+  'tradeAreaId',
+  'type',
+  'unitId',
+  'unitOfMeasure',
+  'unitOfMeasureToShortString',
   'units',
   'value',
+  'values',
+  'warningEntries',
+  'warnings',
 ]);
 const credentialKey = /(?:authorization|cookie|credential|login|password|secret|token)/i;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -64,11 +155,23 @@ function assertSafeString(value: string, key: string, location: string): void {
   });
   expect(nonReservedDomain, `${location} contains a non-reserved domain`).toBeUndefined();
 
-  if (key === 'id') {
+  if (
+    key === 'id' ||
+    key === 'Id' ||
+    key === 'DepartmentId' ||
+    key === 'MaterialId' ||
+    key === 'UnitId' ||
+    key === 'Value' ||
+    key === 'departmentId' ||
+    key === 'materialId' ||
+    key === 'productId' ||
+    key === 'tradeAreaId' ||
+    key === 'unitId'
+  ) {
     expect(uuid.test(value), `${location} must contain a synthetic UUID`).toBe(true);
     return;
   }
-  if (key === 'date') {
+  if (key === 'date' || key === 'SupplyDateTime') {
     expect(isoDate.test(value), `${location} must contain an ISO timestamp`).toBe(true);
     return;
   }
@@ -96,8 +199,35 @@ function assertSafeString(value: string, key: string, location: string): void {
     );
     return;
   }
-  if (key === 'displayName' || key === 'name') {
+  if (
+    key === 'displayName' ||
+    key === 'MaterialName' ||
+    key === 'Text' ||
+    key === 'materialName' ||
+    key === 'name' ||
+    key === 'nameDepartment' ||
+    key === 'nameUnit' ||
+    key === 'productName' ||
+    key === 'text'
+  ) {
     expect(value, `${location} must be explicitly marked synthetic`).toMatch(/^Synthetic /);
+    return;
+  }
+  if (key === 'datePeriod') {
+    expect(value, `${location} must contain a synthetic date period`).toMatch(
+      /^\d{2}\.\d{2}\.\d{4} - \d{2}\.\d{2}\.\d{4}$/,
+    );
+    return;
+  }
+  if (
+    key === 'lossMaterialQuantityToString' ||
+    key === 'productionMaterialQuantityToString'
+  ) {
+    expect(value, `${location} must contain a decimal quantity`).toMatch(/^\d+\.\d+$/);
+    return;
+  }
+  if (key === 'unitOfMeasureToShortString') {
+    expect(value, `${location} must contain a short unit label`).toMatch(/^[a-z]{1,8}$/);
     return;
   }
 
