@@ -1,0 +1,75 @@
+name: bazols-demo
+
+x-app-environment: &app-environment
+  NODE_ENV: test
+  HOST: 0.0.0.0
+  PORT: 8000
+  DATABASE_URL: postgresql://bazols:${POSTGRES_PASSWORD}@db:5432/bazols
+  SESSION_SECRET: ${SESSION_SECRET}
+  APP_ORIGIN: http://${DEMO_HOST}:8080
+  RAW_DATA_ENCRYPTION_KEY: ${RAW_DATA_ENCRYPTION_KEY}
+  SOURCE_SITE_URL: http://fake-source:9999
+  SOURCE_SITE_LOGIN: source-login
+  SOURCE_SITE_PASSWORD: source-password
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bazols
+      POSTGRES_USER: bazols
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migration.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bazols -d bazols"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  fake-source:
+    image: bazols-demo-fake:${DEMO_TAG}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:9999/__health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  app:
+    image: bazols-demo-app:${DEMO_TAG}
+    restart: unless-stopped
+    environment: *app-environment
+    depends_on:
+      db:
+        condition: service_healthy
+      fake-source:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8000/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  worker:
+    image: bazols-demo-app:${DEMO_TAG}
+    restart: unless-stopped
+    command: ["node", "apps/api/dist/worker.js"]
+    environment: *app-environment
+    depends_on:
+      app:
+        condition: service_healthy
+
+  web:
+    image: bazols-demo-web:${DEMO_TAG}
+    restart: unless-stopped
+    ports:
+      - "${DEMO_HOST}:8080:8080"
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

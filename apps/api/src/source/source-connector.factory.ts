@@ -6,6 +6,7 @@ export type SourceConnectorFactoryConfig = {
   login: string;
   password: string;
   allowInsecureForTests: boolean;
+  insecureTestHostname?: string;
 };
 
 export class SourceConnectorFactory {
@@ -15,6 +16,9 @@ export class SourceConnectorFactory {
     return new SourceConnector(
       new SourceHttpClient(this.config.baseUrl, {
         allowInsecureForTests: this.config.allowInsecureForTests,
+        ...(this.config.insecureTestHostname
+          ? { insecureTestHostname: this.config.insecureTestHostname }
+          : {}),
       }),
       { login: this.config.login, password: this.config.password },
     );

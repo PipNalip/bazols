@@ -14,4 +14,5 @@ app.enableCors({
   allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'X-Correlation-ID'],
 });
 const port = Number(process.env.PORT ?? 8000);
-await app.listen(port, '127.0.0.1');
+const host = process.env.HOST ?? '127.0.0.1';
+await app.listen(port, host);

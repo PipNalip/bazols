@@ -73,6 +73,7 @@ export class AppModule {
               login: env.SOURCE_SITE_LOGIN,
               password: env.SOURCE_SITE_PASSWORD,
               allowInsecureForTests: env.NODE_ENV === 'test',
+              ...(env.NODE_ENV === 'test' ? { insecureTestHostname: 'fake-source' } : {}),
             }),
         },
         {
