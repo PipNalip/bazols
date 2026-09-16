@@ -7,6 +7,10 @@ import { SourceError } from './source.errors.js';
 import {
   parseEmployeeRatingResponse,
   parsePermissionsResponse,
+  parseProductCatalogResponse,
+  parseProductTechnicalCardSummaryResponse,
+  parseProductionMaterialsResponse,
+  parseTechnicalCardsResponse,
 } from './source.schemas.js';
 
 const fixtureRoot = join(process.cwd(), 'test/fixtures/source');
@@ -25,6 +29,73 @@ function expectSourceCode(run: () => unknown, code: string): void {
 }
 
 describe('source response schemas', () => {
+  it('accepts product catalog data and rejects missing product identity', () => {
+    expect(parseProductCatalogResponse(fixture('products.success.json'))).toHaveLength(1);
+    expect(parseProductCatalogResponse(fixture('products.empty.json'))).toEqual([]);
+    expectSourceCode(
+      () => parseProductCatalogResponse(fixture('products.invalid.json')),
+      'SOURCE_CONTRACT_INVALID',
+    );
+  });
+
+  it('accepts the production material contract used by technical cards', () => {
+    expect(
+      parseProductionMaterialsResponse(fixture('production-materials.success.json')),
+    ).toHaveLength(1);
+
+    const invalid = structuredClone(
+      fixture('production-materials.success.json'),
+    ) as Array<Record<string, unknown>>;
+    delete invalid[0]?.id;
+    expectSourceCode(
+      () => parseProductionMaterialsResponse(invalid),
+      'SOURCE_CONTRACT_INVALID',
+    );
+  });
+
+  it('accepts the product technical-card summary contract', () => {
+    expect(
+      parseProductTechnicalCardSummaryResponse(
+        fixture('product-technical-card-summary.success.json'),
+      ).data,
+    ).toMatchObject({
+      productId: '60000000-0000-4000-8000-000000000001',
+      areTechnicalCardsExists: true,
+    });
+
+    const missingId = structuredClone(
+      fixture('product-technical-card-summary.success.json'),
+    ) as { data: Record<string, unknown> };
+    delete missingId.data.productId;
+    expectSourceCode(
+      () => parseProductTechnicalCardSummaryResponse(missingId),
+      'SOURCE_CONTRACT_INVALID',
+    );
+
+    const contradictoryEnvelope = structuredClone(
+      fixture('product-technical-card-summary.success.json'),
+    ) as Record<string, unknown>;
+    contradictoryEnvelope.isFailed = true;
+    expectSourceCode(
+      () => parseProductTechnicalCardSummaryResponse(contradictoryEnvelope),
+      'SOURCE_RESPONSE_UNSUCCESSFUL',
+    );
+  });
+
+  it('accepts empty technical cards and rejects a card without identity', () => {
+    expect(
+      parseTechnicalCardsResponse(fixture('technical-cards.success.json')).data.cards,
+    ).toHaveLength(1);
+    expect(parseTechnicalCardsResponse(fixture('technical-cards.empty.json')).data).toEqual({
+      cards: [],
+      totalrows: 0,
+    });
+    expectSourceCode(
+      () => parseTechnicalCardsResponse(fixture('technical-cards.invalid.json')),
+      'SOURCE_CONTRACT_INVALID',
+    );
+  });
+
   it('accepts the valid permissions and rating fixtures while retaining unknown fields', () => {
     const permissions = parsePermissionsResponse(fixture('permissions.success.json'));
     const response = validRating();
@@ -38,6 +109,15 @@ describe('source response schemas', () => {
       roles: ['SYNTHETIC_REPORT_VIEWER'],
     });
     expect(rating.data).toMatchObject({ sourceMetadata: { retained: true }, totalRows: 2 });
+  });
+
+  it('normalizes the current numeric-role permissions contract', () => {
+    expect(parsePermissionsResponse(fixture('permissions.current.json')).data.units).toEqual([
+      {
+        id: '10000000-0000-4000-8000-000000000001',
+        roles: ['1', '3'],
+      },
+    ]);
   });
 
   it('rejects a missing order ID', () => {

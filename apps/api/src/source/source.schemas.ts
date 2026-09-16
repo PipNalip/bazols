@@ -25,6 +25,24 @@ const permissionsResponse = z
   })
   .passthrough();
 
+const currentPermissionsResponse = z
+  .object({
+    isSuccess: z.literal(true),
+    data: z
+      .object({
+        permissions: z.array(
+          z
+            .object({
+              unitId: sourceId,
+              roles: z.array(z.number().int()).min(1),
+            })
+            .passthrough(),
+        ),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
 const successfulResponse = z
   .object({
     isSuccess: z.literal(true),
@@ -74,9 +92,91 @@ const employeeRatingResponse = z
   })
   .passthrough();
 
+const productCatalogResponse = z.array(
+  z
+    .object({
+      id: sourceId,
+      name: z.string().min(1),
+      isRemoved: z.boolean(),
+      needToPrepare: z.boolean(),
+      netWeight: z.number().nonnegative(),
+      netWeightUnitOfMeasure: z.number().int(),
+      productType: z.number().int(),
+    })
+    .passthrough(),
+);
+
+const productionMaterialsResponse = z.array(
+  z
+    .object({
+      id: sourceId,
+      text: z.string().min(1),
+      type: z.number().int(),
+      category: z.number().int(),
+      unitOfMeasure: z.number().int(),
+      unitOfMeasureToShortString: z.string().min(1),
+      isRemoved: z.boolean(),
+    })
+    .passthrough(),
+);
+
+const productTechnicalCardSummaryResponse = z
+  .object({
+    isSuccess: z.literal(true),
+    data: z
+      .object({
+        productId: sourceId,
+        productName: z.string().min(1),
+        areTechnicalCardsExists: z.boolean(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+const technicalCardItem = z
+  .object({
+    id: sourceId,
+    materialName: z.string().min(1),
+    materialCategory: z.number().int(),
+    materialIsRemoved: z.boolean(),
+    lossMaterialQuantityToString: z.string().min(1),
+    productionMaterialQuantityToString: z.string().min(1),
+  })
+  .passthrough();
+
+const technicalCardsResponse = z
+  .object({
+    isSuccess: z.literal(true),
+    data: z
+      .object({
+        cards: z.array(
+          z
+            .object({
+              id: sourceId,
+              datePeriod: z.string().min(1),
+              isActive: z.boolean(),
+              isActiveCurrentCard: z.boolean(),
+              isDeactivated: z.boolean(),
+              calculationItems: z.array(technicalCardItem),
+              packingItems: z.array(technicalCardItem),
+            })
+            .passthrough(),
+        ),
+        totalrows: z.number().int().nonnegative(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
 export type PermissionsResponse = z.infer<typeof permissionsResponse>;
 export type EmployeeRatingResponse = z.infer<typeof employeeRatingResponse>;
 export type EmployeeRatingRow = EmployeeRatingResponse['data']['rows'][number];
+export type ProductCatalogResponse = z.infer<typeof productCatalogResponse>;
+export type ProductionMaterialsResponse = z.infer<typeof productionMaterialsResponse>;
+export type ProductTechnicalCardSummaryResponse = z.infer<
+  typeof productTechnicalCardSummaryResponse
+>;
+export type TechnicalCardsResponse = z.infer<typeof technicalCardsResponse>;
 
 function parseCents(value: string): bigint {
   const [whole, fraction] = value.split('.');
@@ -87,8 +187,8 @@ function assertSuccessfulEnvelope(input: unknown): void {
   if (
     typeof input === 'object' &&
     input !== null &&
-    'isSuccess' in input &&
-    input.isSuccess === false
+    (('isSuccess' in input && input.isSuccess === false) ||
+      ('isFailed' in input && input.isFailed === true))
   ) {
     throw new SourceError('SOURCE_RESPONSE_UNSUCCESSFUL');
   }
@@ -104,7 +204,22 @@ function parseWithContract<T>(schema: z.ZodType<T>, input: unknown): T {
 }
 
 export function parsePermissionsResponse(input: unknown): PermissionsResponse {
-  return parseWithContract(permissionsResponse, input);
+  assertSuccessfulEnvelope(input);
+  const legacy = permissionsResponse.safeParse(input);
+  if (legacy.success) {
+    return legacy.data;
+  }
+
+  const current = parseWithContract(currentPermissionsResponse, input);
+  return {
+    isSuccess: true,
+    data: {
+      units: current.data.permissions.map((permission) => ({
+        id: permission.unitId,
+        roles: permission.roles.map(String),
+      })),
+    },
+  };
 }
 
 export function parseSuccessfulResponse(
@@ -130,4 +245,22 @@ export function parseEmployeeRatingResponse(input: unknown): EmployeeRatingRespo
   }
 
   return response;
+}
+
+export function parseProductCatalogResponse(input: unknown): ProductCatalogResponse {
+  return parseWithContract(productCatalogResponse, input);
+}
+
+export function parseProductionMaterialsResponse(input: unknown): ProductionMaterialsResponse {
+  return parseWithContract(productionMaterialsResponse, input);
+}
+
+export function parseProductTechnicalCardSummaryResponse(
+  input: unknown,
+): ProductTechnicalCardSummaryResponse {
+  return parseWithContract(productTechnicalCardSummaryResponse, input);
+}
+
+export function parseTechnicalCardsResponse(input: unknown): TechnicalCardsResponse {
+  return parseWithContract(technicalCardsResponse, input);
 }

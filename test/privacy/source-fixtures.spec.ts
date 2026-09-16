@@ -12,30 +12,73 @@ const expectedFixtureNames = [
   'employees-rating.empty.json',
   'employees-rating.invalid.json',
   'employees-rating.success.json',
+  'permissions.current.json',
   'permissions.success.json',
+  'product-technical-card-summary.success.json',
+  'production-materials.success.json',
+  'products.empty.json',
+  'products.invalid.json',
+  'products.success.json',
+  'technical-cards.empty.json',
+  'technical-cards.invalid.json',
+  'technical-cards.success.json',
 ];
 const allowedKeys = new Set([
+  'areTechnicalCardsExists',
+  'calculationItems',
+  'cards',
+  'category',
   'currency',
   'customer',
   'data',
   'date',
+  'datePeriod',
   'displayName',
   'email',
+  'errors',
   'id',
+  'isActive',
+  'isActiveCurrentCard',
+  'isDeactivated',
+  'isFailed',
+  'isRemoved',
   'isSuccess',
   'items',
+  'lossMaterialQuantityToString',
+  'materialCategory',
+  'materialIsRemoved',
+  'materialName',
   'name',
+  'nameDepartment',
+  'nameUnit',
+  'needToPrepare',
+  'netWeight',
+  'netWeightUnitOfMeasure',
   'orders',
+  'packingItems',
+  'permissions',
   'phone',
   'price',
   'priceWithDiscountForOrder',
   'product',
+  'productId',
+  'productName',
   'productPrice',
+  'productType',
+  'productionMaterialQuantityToString',
   'roles',
   'rows',
+  'text',
   'totalRows',
+  'totalrows',
+  'type',
+  'unitId',
+  'unitOfMeasure',
+  'unitOfMeasureToShortString',
   'units',
   'value',
+  'warningEntries',
+  'warnings',
 ]);
 const credentialKey = /(?:authorization|cookie|credential|login|password|secret|token)/i;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -64,7 +107,7 @@ function assertSafeString(value: string, key: string, location: string): void {
   });
   expect(nonReservedDomain, `${location} contains a non-reserved domain`).toBeUndefined();
 
-  if (key === 'id') {
+  if (key === 'id' || key === 'productId' || key === 'unitId') {
     expect(uuid.test(value), `${location} must contain a synthetic UUID`).toBe(true);
     return;
   }
@@ -96,8 +139,33 @@ function assertSafeString(value: string, key: string, location: string): void {
     );
     return;
   }
-  if (key === 'displayName' || key === 'name') {
+  if (
+    key === 'displayName' ||
+    key === 'materialName' ||
+    key === 'name' ||
+    key === 'nameDepartment' ||
+    key === 'nameUnit' ||
+    key === 'productName' ||
+    key === 'text'
+  ) {
     expect(value, `${location} must be explicitly marked synthetic`).toMatch(/^Synthetic /);
+    return;
+  }
+  if (key === 'datePeriod') {
+    expect(value, `${location} must contain a synthetic date period`).toMatch(
+      /^\d{2}\.\d{2}\.\d{4} - \d{2}\.\d{2}\.\d{4}$/,
+    );
+    return;
+  }
+  if (
+    key === 'lossMaterialQuantityToString' ||
+    key === 'productionMaterialQuantityToString'
+  ) {
+    expect(value, `${location} must contain a decimal quantity`).toMatch(/^\d+\.\d+$/);
+    return;
+  }
+  if (key === 'unitOfMeasureToShortString') {
+    expect(value, `${location} must contain a short unit label`).toMatch(/^[a-z]{1,8}$/);
     return;
   }
 

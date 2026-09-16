@@ -42,6 +42,31 @@ const operations: Array<{
       pageSize: '50',
     },
   },
+  {
+    operation: { kind: 'productCatalog' },
+    path: '/Products/Home/GetAllProducts',
+    query: { isRemove: 'false' },
+  },
+  {
+    operation: { kind: 'productionMaterials' },
+    path: '/InventoryControl/TechnicalCards/GetAllProductionMaterials',
+    query: {},
+  },
+  {
+    operation: { kind: 'productTechnicalCardSummary', productId: 'product-1' },
+    path: '/InventoryControl/TechnicalCards/GetProductById',
+    query: { productId: 'product-1' },
+  },
+  {
+    operation: {
+      kind: 'technicalCards',
+      productId: 'product-1',
+      startIndex: 0,
+      pageSize: 20,
+    },
+    path: '/InventoryControl/TechnicalCards/GetPagedTechnicalCard',
+    query: { pageSize: '20', productId: 'product-1', startIndex: '0' },
+  },
 ];
 
 function clientWith(transport: typeof fetch): SourceHttpClient {

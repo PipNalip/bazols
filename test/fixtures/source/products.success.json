@@ -1,0 +1,11 @@
+[
+  {
+    "id": "60000000-0000-4000-8000-000000000001",
+    "name": "Synthetic Product Alpha",
+    "isRemoved": false,
+    "needToPrepare": true,
+    "netWeight": 250,
+    "netWeightUnitOfMeasure": 1,
+    "productType": 2
+  }
+]

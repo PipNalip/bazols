@@ -1,0 +1,30 @@
+{
+  "isSuccess": true,
+  "data": {
+    "cards": [
+      {
+        "id": "80000000-0000-4000-8000-000000000001",
+        "datePeriod": "01.09.2026 - 30.09.2026",
+        "isActive": true,
+        "isActiveCurrentCard": true,
+        "isDeactivated": false,
+        "calculationItems": [
+          {
+            "id": "90000000-0000-4000-8000-000000000001",
+            "materialName": "Synthetic Material Alpha",
+            "materialCategory": 2,
+            "materialIsRemoved": false,
+            "lossMaterialQuantityToString": "0.10",
+            "productionMaterialQuantityToString": "1.00"
+          }
+        ],
+        "packingItems": []
+      }
+    ],
+    "totalrows": 1
+  },
+  "errors": [],
+  "warnings": [],
+  "warningEntries": [],
+  "isFailed": false
+}

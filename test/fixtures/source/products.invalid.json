@@ -1,0 +1,10 @@
+[
+  {
+    "name": "Synthetic Product Without Id",
+    "isRemoved": false,
+    "needToPrepare": true,
+    "netWeight": 250,
+    "netWeightUnitOfMeasure": 1,
+    "productType": 2
+  }
+]

@@ -42,7 +42,8 @@ Read-only исследование 2026-09-15 подтвердило:
 - `order.items[].priceWithDiscountForOrder.value` суммируется в `order.price.value` для всех 151 проверенного заказа;
 - отдельного поля количества в позиции нет: одна уникальная запись `item` считается одной проданной единицей;
 - ответ содержит персональные данные сотрудников и клиентов;
-- доступ к себестоимости и техническим картам пока не подтверждён.
+- отдельное read-only исследование 2026-09-16 подтвердило каталог продуктов и технические карты, но в доступных ответах нет денежной себестоимости, валюты себестоимости или налогов;
+- текущие menu-price endpoints запрещены во всех проверенных выданных контекстах, поэтому цена проданной позиции не трактуется как текущая цена меню; детали зафиксированы в `docs/specs/bazols-product-data-discovery.md`.
 
 Эти наблюдения являются текущим контрактом адаптера, а не обещанием владельца источника. Изменение контракта должно приводить к безопасному отказу нормализации, а не к записи неверных расчётов; зашифрованный исходный response body при этом сохраняется для диагностики.
 
@@ -117,12 +118,16 @@ Queue claim выполняется guarded state transition `QUEUED → RUNNING`
 
 ### REQ-003 — read-only source connector
 
-Разрешённые операции MVP:
+Разрешённые операции source boundary. Первые четыре обслуживают reporting MVP; ещё четыре подтверждены отдельным product-data discovery и пока не участвуют в импорте отчётов:
 
 - `GET /Infrastructure/Authenticate/Authenticate`;
 - `GET /Infrastructure/Authenticate/GetPermissions`;
 - `GET /Infrastructure/Authenticate/SetRole`;
-- `GET /Reports/EmployeesRating/GetData`.
+- `GET /Reports/EmployeesRating/GetData`;
+- `GET /Products/Home/GetAllProducts`;
+- `GET /InventoryControl/TechnicalCards/GetAllProductionMaterials`;
+- `GET /InventoryControl/TechnicalCards/GetProductById`;
+- `GET /InventoryControl/TechnicalCards/GetPagedTechnicalCard`.
 
 Коннектор:
 
@@ -231,7 +236,7 @@ Queue claim выполняется guarded state transition `QUEUED → RUNNING`
 
 ### AC-01 — read-only boundary
 
-Автоматический тест доказывает, что source connector выполняет только четыре allowlisted GET-операции; неизвестный путь, cross-origin redirect и методы `POST`, `PUT`, `PATCH`, `DELETE` отклоняются до сетевого вызова.
+Автоматический тест доказывает, что source connector выполняет только восемь явно перечисленных allowlisted GET-операций: четыре reporting-MVP и четыре product-discovery. Неизвестный путь, cross-origin redirect и методы `POST`, `PUT`, `PATCH`, `DELETE` отклоняются до сетевого вызова.
 
 ### AC-02 — безопасная авторизация источника
 

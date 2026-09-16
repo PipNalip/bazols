@@ -10,7 +10,11 @@ export type SourceOperation =
       endDate: string;
       page: number;
       pageSize: number;
-    };
+    }
+  | { kind: 'productCatalog' }
+  | { kind: 'productionMaterials' }
+  | { kind: 'productTechnicalCardSummary'; productId: string }
+  | { kind: 'technicalCards'; productId: string; startIndex: number; pageSize: number };
 
 export type SourceEndpoint = SourceOperation['kind'];
 
@@ -56,6 +60,34 @@ export function buildSourceRoute(
           employeeType: '',
           employeeSurname: '',
           page: String(operation.page),
+          pageSize: String(operation.pageSize),
+        }),
+      };
+    case 'productCatalog':
+      return {
+        endpoint: operation.kind,
+        path: '/Products/Home/GetAllProducts',
+        query: new URLSearchParams({ isRemove: 'false' }),
+      };
+    case 'productionMaterials':
+      return {
+        endpoint: operation.kind,
+        path: '/InventoryControl/TechnicalCards/GetAllProductionMaterials',
+        query: new URLSearchParams(),
+      };
+    case 'productTechnicalCardSummary':
+      return {
+        endpoint: operation.kind,
+        path: '/InventoryControl/TechnicalCards/GetProductById',
+        query: new URLSearchParams({ productId: operation.productId }),
+      };
+    case 'technicalCards':
+      return {
+        endpoint: operation.kind,
+        path: '/InventoryControl/TechnicalCards/GetPagedTechnicalCard',
+        query: new URLSearchParams({
+          productId: operation.productId,
+          startIndex: String(operation.startIndex),
           pageSize: String(operation.pageSize),
         }),
       };

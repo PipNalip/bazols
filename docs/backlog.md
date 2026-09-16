@@ -18,7 +18,7 @@ These items do not block local MVP implementation, tests, local Docker builds or
 
 ## Product follow-ups outside reporting MVP
 
-- Confirm source endpoint and formula for cost/margin reporting.
-- Define price-change notification baseline and channel.
+- Cost/margin source: read-only discovery is complete, but the available technical-card endpoints contain quantities without monetary cost. Select and approve an authoritative cost feed before implementing issue #36; see `docs/specs/bazols-product-data-discovery.md`.
+- Price changes: current menu-price endpoints are forbidden for every issued unit/role checked. Obtain least-privilege read access or select another authoritative price feed, then define the notification baseline and channel.
 - Define data retention and deletion procedure.
 - Add scheduling only after manual synchronization is proven reliable.
