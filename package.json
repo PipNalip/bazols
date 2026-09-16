@@ -12,6 +12,7 @@
   },
   "scripts": {
     "test": "NODE_ENV=test node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run",
+    "test:integration": "NODE_ENV=test node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run apps/api/test",
     "test:e2e": "npm run build && node --env-file-if-exists=.env ./node_modules/@playwright/test/cli.js test",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",

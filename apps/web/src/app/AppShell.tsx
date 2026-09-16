@@ -23,8 +23,16 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-function Navigation({ onNavigate }: { onNavigate?: () => void }) {
-  const links = [{ to: '/', label: 'Рейтинги' }];
+function Navigation({ role, onNavigate }: { role: ShellUser['role']; onNavigate?: () => void }) {
+  const links = [
+    { to: '/', label: 'Рейтинги' },
+    ...(role === 'ADMIN'
+      ? [
+          { to: '/admin/users', label: 'Пользователи' },
+          { to: '/admin/sync', label: 'Синхронизация' },
+        ]
+      : []),
+  ];
   return (
     <Stack component="nav" aria-label="Основная навигация" spacing={0.75}>
       {links.map((link) => (
@@ -110,7 +118,7 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25, mb: 4 }}>
           Отчёты ресторана
         </Typography>
-        <Navigation />
+        <Navigation role={user.role} />
         <Box sx={{ mt: 'auto' }}>
           <Divider sx={{ mb: 2 }} />
           <Typography variant="body2" sx={{ mb: 1 }}>
@@ -138,7 +146,7 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
                 Закрыть
               </Button>
             </Box>
-            <Navigation onNavigate={() => setMobileOpen(false)} />
+            <Navigation role={user.role} onNavigate={() => setMobileOpen(false)} />
             <Button color="inherit" onClick={() => void onLogout()}>
               Выйти
             </Button>

@@ -31,7 +31,7 @@ try {
   await prisma.user.create({
     data: { username, passwordHash, role: 'ADMIN' },
   });
-  console.log(`Administrator created: ${username}`);
+  console.log('Administrator created');
 } catch {
   console.error('Administrator could not be created');
   process.exitCode = 1;

@@ -9,6 +9,7 @@ export type FakeSourceOptions = {
   duplicateOrderAcrossPages?: boolean;
   empty?: boolean;
   malformedRating?: boolean;
+  port?: number;
   repeatedPagination?: boolean;
   responseSentinel?: string;
 };
@@ -48,8 +49,25 @@ export async function startFakeSource(
   options: FakeSourceOptions = {},
 ): Promise<FakeSource> {
   const calls: string[] = [];
-  const server = createServer((request, response) => {
+  let malformedRating = options.malformedRating ?? false;
+  const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+
+    if (request.method === 'GET' && url.pathname === '/__health') {
+      sendJson(response, 200, { status: 'ok' });
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/__control') {
+      const chunks: Buffer[] = [];
+      for await (const chunk of request) chunks.push(Buffer.from(chunk));
+      const control = JSON.parse(Buffer.concat(chunks).toString('utf8')) as {
+        malformedRating?: boolean;
+      };
+      malformedRating = control.malformedRating ?? malformedRating;
+      sendJson(response, 200, { malformedRating });
+      return;
+    }
 
     if (request.method !== 'GET') {
       sendJson(response, 405, { isSuccess: false });
@@ -111,7 +129,7 @@ export async function startFakeSource(
         return;
       }
 
-      if (options.malformedRating) {
+      if (malformedRating) {
         sendJson(response, 200, {
           isSuccess: true,
           responseSentinel: options.responseSentinel,
@@ -159,7 +177,7 @@ export async function startFakeSource(
 
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
-    server.listen(0, '127.0.0.1', resolve);
+    server.listen(options.port ?? 0, '127.0.0.1', resolve);
   });
   const address = server.address();
   if (!address || typeof address === 'string') {

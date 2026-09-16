@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Alert,
@@ -42,7 +42,13 @@ function ReportMessage({ title, detail }: { title: string; detail: string }) {
   );
 }
 
-export function ReportsPage({ today = new Date().toISOString().slice(0, 10) }: { today?: string }) {
+export function ReportsPage({
+  today = new Date().toISOString().slice(0, 10),
+  pollInterval = 2_000,
+}: {
+  today?: string;
+  pollInterval?: number;
+}) {
   const [restaurantId, setRestaurantId] = useState('');
   const [from, setFrom] = useState(firstOfMonth(today));
   const [to, setTo] = useState(today);
@@ -55,10 +61,24 @@ export function ReportsPage({ today = new Date().toISOString().slice(0, 10) }: {
       ? 'Дата начала должна быть не позже даты окончания.'
       : null;
 
-  const restaurants = useQuery({ queryKey: ['restaurants'], queryFn: listRestaurants });
+  const restaurants = useQuery({
+    queryKey: ['restaurants'],
+    queryFn: listRestaurants,
+    refetchInterval: (query) => query.state.data?.some(
+      (restaurant) => restaurant.latestSync?.status === 'QUEUED' || restaurant.latestSync?.status === 'RUNNING',
+    ) ? pollInterval : false,
+  });
   useEffect(() => {
     if (!restaurantId && restaurants.data?.[0]) setRestaurantId(restaurants.data[0].id);
   }, [restaurantId, restaurants.data]);
+
+  const selectedRestaurant = useMemo(
+    () => restaurants.data?.find((item) => item.id === restaurantId),
+    [restaurantId, restaurants.data],
+  );
+  const syncActive = selectedRestaurant?.latestSync?.status === 'QUEUED' ||
+    selectedRestaurant?.latestSync?.status === 'RUNNING';
+  const wasSyncActive = useRef(false);
 
   const employees = useQuery({
     queryKey: ['employee-ranking', restaurantId, from, to, employeeSort],
@@ -71,11 +91,15 @@ export function ReportsPage({ today = new Date().toISOString().slice(0, 10) }: {
     enabled: Boolean(restaurantId) && tab === 'products' && periodError === null,
   });
 
-  const selectedRestaurant = useMemo(
-    () => restaurants.data?.find((item) => item.id === restaurantId),
-    [restaurantId, restaurants.data],
-  );
   const current = tab === 'employees' ? employees : products;
+
+  useEffect(() => {
+    if (wasSyncActive.current && selectedRestaurant?.latestSync?.status === 'SUCCEEDED') {
+      void employees.refetch();
+      void products.refetch();
+    }
+    wasSyncActive.current = syncActive;
+  }, [employees.refetch, products.refetch, selectedRestaurant?.latestSync?.status, syncActive]);
 
   if (restaurants.isPending) {
     return (

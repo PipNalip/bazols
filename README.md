@@ -9,14 +9,10 @@
 Требуется Node.js 22 или новее.
 
 ```sh
-npm install --include=dev
-cp .env.example .env
-# Замените одинаковым локальным паролем значение
-# replace-with-a-local-database-password в POSTGRES_PASSWORD и DATABASE_URL.
-# Сгенерируйте отдельные секреты и вставьте их в .env:
-#   openssl rand -hex 32      # SESSION_SECRET
-#   openssl rand -base64 32   # RAW_DATA_ENCRYPTION_KEY
-# Замените остальные значения replace-with-*.
+npm ci --include=dev
+node scripts/create-local-env.mjs
+# Скрипт без вывода создаёт database/session/encryption secrets и не перезаписывает .env.
+# В .env замените только source URL/login/password на одобренные read-only значения.
 npm run db:up
 npm run db:migrate
 npm run build
@@ -60,6 +56,12 @@ npm run dev --workspace @bazols/web
 
 Локальная PostgreSQL слушает только `127.0.0.1`. Остановить контейнер можно командой `npm run db:down`; именованный volume с данными при этом сохраняется.
 
+Подробные инструкции:
+
+- [локальная разработка](docs/runbooks/local-development.md);
+- [ручная синхронизация и безопасная диагностика](docs/runbooks/manual-sync.md);
+- [границы обработки данных и приватности](docs/security/data-handling.md).
+
 ## Проверка приложения
 
 ```sh
@@ -70,7 +72,7 @@ npm run lint
 npm run build
 ```
 
-`npm run test:e2e` собирает workspaces, запускает реальные NestJS и Vite entry points и проверяет Chromium-сценарий login → период → обе вкладки → смена метрики. Нужны запущенная локальная PostgreSQL и применённые миграции (`npm run db:up && npm run db:migrate`); тест создаёт и удаляет только собственную синтетическую fixture.
+`npm run test:e2e` собирает workspaces и запускает fake source, реальные NestJS API, отдельный worker, Vite и Chromium. Полный сценарий проверяет login → discovery/mapping ресторана → ручной import → обе таблицы рейтингов → создание и restaurant-scope менеджера. Нужна отдельная локальная PostgreSQL с применёнными миграциями (`npm run db:up && npm run db:migrate`); тест создаёт и удаляет только собственные синтетические данные.
 
 ## Что внутри
 
@@ -136,6 +138,7 @@ sh tests/test-template.sh
 
 ## Что ещё не включено
 
+- плановые импорты, cost/margin-отчёты, уведомления об изменении цен и автоматизация retention/deletion (см. `docs/backlog.md`);
 - универсальный Dockerfile;
 - CI/CD и deployment scripts;
 - настройки конкретной Jira, GitHub, GitLab или облака;

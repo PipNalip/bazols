@@ -9,10 +9,10 @@ import { AppShell } from './AppShell.js';
 
 afterEach(cleanup);
 
-function renderShell() {
+function renderShell(role: 'ADMIN' | 'MANAGER' = 'MANAGER') {
   return render(
     <MemoryRouter>
-      <AppShell user={{ id: 'user-a', username: 'manager', role: 'MANAGER' }} onLogout={() => {}}>
+      <AppShell user={{ id: 'user-a', username: 'manager', role }} onLogout={() => {}}>
         <h1>Рейтинги</h1>
       </AppShell>
     </MemoryRouter>,
@@ -31,6 +31,13 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Рейтинги' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Пользователи' })).not.toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
+  });
+
+  it('shows administration links only to administrators', () => {
+    renderShell('ADMIN');
+
+    expect(screen.getByRole('link', { name: 'Пользователи' })).toHaveAttribute('href', '/admin/users');
+    expect(screen.getByRole('link', { name: 'Синхронизация' })).toHaveAttribute('href', '/admin/sync');
   });
 
   it('opens and closes accessible mobile navigation', async () => {
