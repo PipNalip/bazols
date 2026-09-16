@@ -2,7 +2,7 @@
 
 Внутренняя система отчётности ресторанов: API и web-интерфейс для отчётов по сотрудникам и товарам. Репозиторий развивается как TypeScript npm-workspace с NestJS API, React/MUI frontend и общими runtime-контрактами.
 
-Сейчас реализованы health-срез, безопасная интеграция с источником, DB-backed очередь и worker, ручной admin-only sync API, Argon2id login с server-side sessions/CSRF, роли и администрирование менеджеров и ресторанов. Raw responses шифруются до записи, а полный импорт нормализованных данных атомарен и идемпотентен. Reports API и рабочий frontend ещё не реализованы; Production не развёрнут. Оставшиеся функции и инфраструктурные задачи перечислены в `docs/backlog.md` и спецификациях `docs/specs/`.
+Сейчас реализованы health-срез, безопасная интеграция с источником, DB-backed очередь и worker, ручной admin-only sync API, Argon2id login с server-side sessions/CSRF, роли и администрирование менеджеров и ресторанов. Raw responses шифруются до записи, а полный импорт нормализованных данных атомарен и идемпотентен. Reports API считает рейтинги сотрудников и товаров, а React/MUI frontend поддерживает login/session, выбор ресторана и периода, сортировки, обе вкладки и обязательные состояния ошибок. Production не развёрнут. Оставшиеся функции и инфраструктурные задачи перечислены в `docs/backlog.md` и спецификациях `docs/specs/`.
 
 ## Локальный запуск
 
@@ -41,12 +41,13 @@ unset BAZOLS_ADMIN_PASSWORD
 
 `APP_ORIGIN` в `.env` должен точно совпадать с origin браузерного frontend. В Production допускается только HTTPS origin; session cookie автоматически получает `Secure`.
 
-Реализованные API-маршруты этапа 2:
+Основные реализованные API-маршруты:
 
 - `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`;
 - `POST /api/sync-runs`, `GET /api/sync-runs`, `GET /api/sync-runs/:id`;
 - `GET /api/source-discovery`;
 - `GET|POST /api/restaurants`, `PATCH /api/restaurants/:id`;
+- `GET /api/restaurants/:id/reports/employees`, `GET /api/restaurants/:id/reports/products`;
 - `GET|POST /api/users`, `POST /api/users/:id/block`, `POST /api/users/:id/reset-password`, `PUT /api/users/:id/restaurants`.
 
 Все state-changing запросы после login требуют session cookie, точный `Origin` и `X-CSRF-Token` из login/`GET /api/auth/me`.
@@ -63,10 +64,13 @@ npm run dev --workspace @bazols/web
 
 ```sh
 npm test
+npm run test:e2e
 npm run typecheck
 npm run lint
 npm run build
 ```
+
+`npm run test:e2e` собирает workspaces, запускает реальные NestJS и Vite entry points и проверяет Chromium-сценарий login → период → обе вкладки → смена метрики. Нужны запущенная локальная PostgreSQL и применённые миграции (`npm run db:up && npm run db:migrate`); тест создаёт и удаляет только собственную синтетическую fixture.
 
 ## Что внутри
 

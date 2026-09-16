@@ -62,7 +62,7 @@ async function auth(role: 'ADMIN' | 'MANAGER', username: string) {
   const user = await prisma.user.create({
     data: { username, passwordHash: 'synthetic-hash', role },
   });
-  const session = await sessions.create(user.id, now);
+  const session = await sessions.create(user.id);
   return {
     user,
     cookie: `${SESSION_COOKIE}=${session.token}`,

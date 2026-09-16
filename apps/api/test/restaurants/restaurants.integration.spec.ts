@@ -197,13 +197,42 @@ describe('restaurant administration HTTP API', () => {
     await prisma.userRestaurant.create({
       data: { userId: manager.user.id, restaurantId: restaurantA.id },
     });
+    await prisma.syncRun.createMany({
+      data: [
+        {
+          restaurantId: restaurantA.id,
+          requestedById: admin.user.id,
+          beginDate: new Date('2026-09-01T00:00:00.000Z'),
+          endDate: new Date('2026-09-01T00:00:00.000Z'),
+          status: 'SUCCEEDED',
+          createdAt: new Date('2026-09-15T09:00:00.000Z'),
+          finishedAt: new Date('2026-09-15T10:00:00.000Z'),
+        },
+        {
+          restaurantId: restaurantA.id,
+          requestedById: admin.user.id,
+          beginDate: new Date('2026-09-02T00:00:00.000Z'),
+          endDate: new Date('2026-09-02T00:00:00.000Z'),
+          status: 'FAILED',
+          safeErrorCode: 'SOURCE_UNAVAILABLE',
+          createdAt: new Date('2026-09-16T09:00:00.000Z'),
+          finishedAt: new Date('2026-09-16T10:00:00.000Z'),
+        },
+      ],
+    });
     const app = await createApp();
 
     const managerList = await request(app.getHttpServer())
       .get('/api/restaurants')
       .set('Cookie', manager.cookie)
       .expect(200);
-    expect(managerList.body).toEqual([expect.objectContaining({ id: restaurantA.id })]);
+    expect(managerList.body).toEqual([
+      expect.objectContaining({
+        id: restaurantA.id,
+        lastSuccessfulSyncAt: '2026-09-15T10:00:00.000Z',
+        latestSync: { status: 'FAILED', safeErrorCode: 'SOURCE_UNAVAILABLE' },
+      }),
+    ]);
 
     const adminList = await request(app.getHttpServer())
       .get('/api/restaurants')

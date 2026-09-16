@@ -20,8 +20,22 @@ function view(restaurant: {
   sourceRole: string;
   timezone: string;
   active: boolean;
+  syncRuns?: Array<{
+    status: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+    safeErrorCode: string | null;
+    finishedAt: Date | null;
+  }>;
 }) {
-  return { ...restaurant };
+  const { syncRuns = [], ...details } = restaurant;
+  const latest = syncRuns[0];
+  const lastSuccessful = syncRuns.find((run) => run.status === 'SUCCEEDED');
+  return {
+    ...details,
+    lastSuccessfulSyncAt: lastSuccessful?.finishedAt?.toISOString() ?? null,
+    latestSync: latest
+      ? { status: latest.status, safeErrorCode: latest.safeErrorCode }
+      : null,
+  };
 }
 
 function validTimezone(timezone: string): boolean {
@@ -47,6 +61,12 @@ export class RestaurantsService {
           ? { active: true }
           : { active: true, users: { some: { userId: user.id } } },
       orderBy: [{ displayName: 'asc' }, { id: 'asc' }],
+      include: {
+        syncRuns: {
+          orderBy: { createdAt: 'desc' },
+          select: { status: true, safeErrorCode: true, finishedAt: true },
+        },
+      },
     });
     return restaurants.map(view);
   }
