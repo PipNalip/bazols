@@ -8,6 +8,7 @@ export type FakeSourceOptions = {
   duplicateItemAcrossPages?: boolean;
   duplicateOrderAcrossPages?: boolean;
   empty?: boolean;
+  host?: string;
   malformedRating?: boolean;
   port?: number;
   repeatedPagination?: boolean;
@@ -177,7 +178,7 @@ export async function startFakeSource(
 
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
-    server.listen(options.port ?? 0, '127.0.0.1', resolve);
+    server.listen(options.port ?? 0, options.host ?? '127.0.0.1', resolve);
   });
   const address = server.address();
   if (!address || typeof address === 'string') {

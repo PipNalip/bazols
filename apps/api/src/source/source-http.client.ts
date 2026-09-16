@@ -13,6 +13,7 @@ export type SourceHttpResponse = {
 type SourceHttpClientOptions = {
   allowInsecureForTests?: boolean;
   fetch?: typeof fetch;
+  insecureTestHostname?: string;
 };
 
 function isRedirect(response: Response): boolean {
@@ -25,13 +26,15 @@ export class SourceHttpClient {
 
   constructor(baseUrl: string, options: SourceHttpClientOptions = {}) {
     this.#baseUrl = new URL(baseUrl);
-    const isLoopback = ['127.0.0.1', '::1', 'localhost'].includes(this.#baseUrl.hostname);
-    const allowsLoopbackHttp =
+    const isAllowedTestHost =
+      ['127.0.0.1', '::1', 'localhost'].includes(this.#baseUrl.hostname) ||
+      this.#baseUrl.hostname === options.insecureTestHostname;
+    const allowsTestHttp =
       options.allowInsecureForTests === true &&
       this.#baseUrl.protocol === 'http:' &&
-      isLoopback;
+      isAllowedTestHost;
     if (
-      (this.#baseUrl.protocol !== 'https:' && !allowsLoopbackHttp) ||
+      (this.#baseUrl.protocol !== 'https:' && !allowsTestHttp) ||
       this.#baseUrl.username !== '' ||
       this.#baseUrl.password !== '' ||
       this.#baseUrl.search !== '' ||

@@ -5,7 +5,10 @@ if (!Number.isInteger(port) || port < 1 || port > 65_535) {
   throw new Error('FAKE_SOURCE_PORT must be a valid TCP port');
 }
 
-const source = await startFakeSource({ port });
+const source = await startFakeSource({
+  ...(process.env.FAKE_SOURCE_HOST ? { host: process.env.FAKE_SOURCE_HOST } : {}),
+  port,
+});
 console.log(`Fake source ready at ${source.url}`);
 
 let closing = false;
