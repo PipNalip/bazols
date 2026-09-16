@@ -131,5 +131,5 @@
 - CLI `--help`: PASS.
 - Pytest в чистом временном окружении с pytest/openpyxl: **376 passed, 30 failed, 1 error за 53.29 s**. Основной blocker — отсутствующий внешний canonical KB и Windows absolute paths из поставленного profile environment. Два упавших CLI-теста затем прошли по отдельности, то есть suite также имеет order/environment coupling.
 - Rerun product economics с существующим предыдущим периодом: FAIL, воспроизведён `AttributeError` на `db.connect().execute`.
-- Живые Buzzolls endpoints и внешняя доставка не вызывались.
-- Содержимое secret-файлов и рабочих DB не читалось.
+- В рамках первоначального аудита живые Buzzolls endpoints и внешняя доставка не вызывались. После аудита отдельный утверждённый read-only discovery проверил четыре cost/supply GET endpoint через существующую учётку Bazols; mutation и delivery не выполнялись.
+- Содержимое secret-файлов и рабочих DB не читалось. Из санитизированных raw snapshots программно извлекались только endpoint metadata и структурная схема ключей/типов; business values не выводились и не переносились в fixtures.

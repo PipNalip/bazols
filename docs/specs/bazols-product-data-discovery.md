@@ -25,13 +25,19 @@
 | `GET /InventoryControl/TechnicalCards/GetAllProductionMaterials` | нет | ID и название материала, тип/категория, код и короткая подпись единицы измерения, признак удаления |
 | `GET /InventoryControl/TechnicalCards/GetProductById` | `productId` | связь с продуктом, наличие техкарт и признаки доступа; денежных показателей нет |
 | `GET /InventoryControl/TechnicalCards/GetPagedTechnicalCard` | `productId`, `startIndex`, `pageSize` | техкарты, строковая подпись периода, active/deactivated flags, материалы и source-formatted количества |
+| `GET /InventoryControl/AutoCostProduct/GetAutoCostProducts` | `date`, `page`, `count` | product ID, официальный AutoCost по unit/trade area, средний AutoCost, числовые `price`, `fc`, `extraCharge` |
+| `GET /InventoryControl/AutoCostMaterials/GetAutoCostMaterials` | `startDate`, `endDate`, `page`, `count`, optional repeated `departmentIds`, half-finished flag | история AutoCost материала по датам, unit/department и числовой код валюты |
+| `GET /InventoryControl/MaterialSupply/GetAvailableDepartments` | `unitId` | разрешённые supply departments для выбранного unit/role |
+| `GET /InventoryControl/MaterialSupply/GetMaterialSuppliesWithLimit` | date-time range, `unitId`, `departmentId`, `startIndex`, `pageSize` | история поставок, цена и налог строки, количество и единица измерения |
 
-Во время ограниченной проверки источник вернул непустые каталоги продуктов и материалов и непустую техкарту для выбранного в памяти продукта. Количество записей использовалось только как диагностический агрегат и не является стабильным продуктовым контрактом.
+Во время ограниченной проверки источник вернул непустые каталоги, материалы, техкарту, product AutoCost и material AutoCost. Supply endpoint был доступен, но в узком текущем диапазоне вернул пустой список; его структура подтверждена только по санитизированному локальному snapshot альтернативной реализации. Количество записей использовалось только как диагностический агрегат и не является стабильным продуктовым контрактом.
 
 ### Permissions
 
 - Каталог продуктов был доступен во всех проверенных уже выданных контекстах подразделения/роли.
 - Операции материалов и техкарт были доступны в одном разрешённом подразделении и возвращали `Forbidden` в другом независимо от выбранной из выданных ролей. Следовательно, доступ подразделения является обязательной предпосылкой; наличие конкретного номера роли само по себе доступ не гарантирует.
+- Product и material AutoCost доступны в двух ролях первого разрешённого unit. Запрос material AutoCost успешно работает и без `departmentIds`; role из результата permissions по-прежнему выбирается явно.
+- Supply departments и supplies доступны в одной роли второго unit. Cost и supply endpoints поэтому нельзя вызывать в одном произвольно выбранном контексте: worker должен выбирать подтверждённый unit/role для каждой операции и проверять restaurant mapping.
 - Реальные unit IDs и role IDs не фиксируются в коде или документации. Коннектор обязан использовать только результат текущего `GetPermissions` и явно настроенное сопоставление ресторана.
 - Текущий ответ permissions использует `data.permissions[]`, `unitId` и числовые роли. На границе они нормализуются в существующий внутренний формат строковых IDs/roles; неизвестная форма отклоняется.
 
@@ -66,16 +72,21 @@ JavaScript-клиент источника содержит read-only GET-мар
 
 ### Себестоимость, налоги и валовая маржа
 
-В подтверждённых каталогах, материалах и техкартах отсутствуют денежные поля себестоимости, закупочной цены, валюты себестоимости и налогов. Техкарта подтверждает состав и количества, но не стоимость ингредиентов.
+Второй read-only discovery подтвердил официальные product/material monetary endpoints и доступность supply route:
+
+- product AutoCost содержит `autoCost` по unit, `averageAutoCost` по trade area и числовые `price`, `fc`, `extraCharge`;
+- material AutoCost содержит `autoCost` по материалу, дате, unit и department, а также числовой код `currency`;
+- непустая структура supply history с `Price`, `Tax`, quantity `Metrics.Value` и кодом единицы измерения подтверждена только санитизированным snapshot альтернативной реализации; live-запрос подтвердил доступ к route и успешный пустой envelope, но не подтвердил строки поставок.
 
 Следствия:
 
-- себестоимость сейчас **неизвестна**, а не равна нулю;
-- COGS и валовая маржа не вычисляются;
-- показатель `revenue - 0` запрещено показывать как маржу;
-- импорт истории стоимости (issue #36) заблокирован до появления разрешённого денежного источника или отдельного подтверждённого ввода стоимости.
+- issue #36 **разблокирован по доступности source feed**, но ещё требует production orchestration, полной пагинации, нормализации decimal money, restaurant/unit mapping, persistence и reconciliation;
+- официальный product AutoCost является предпочтительным первичным COGS snapshot; material AutoCost подтверждён для детализации, а supplies остаются provisional до live-подтверждения непустой строки;
+- числовой currency code пока не сопоставлен с ISO currency, а семантика `Price`/`Tax` поставки и включение упаковки в официальный AutoCost требуют сверки с source UI;
+- поле `price` в product AutoCost не считается доказанной текущей menu price до отдельной reconciliation, поэтому issue #38 пока не разблокирован;
+- при отсутствии применимого AutoCost себестоимость остаётся `unknown`, а не нулём.
 
-Целевой расчёт после появления authoritative cost feed фиксируется так:
+Целевой расчёт для #37 фиксируется так:
 
 - `net sales` = сумма `priceWithDiscountForOrder` проданных позиций за период;
 - `COGS` = сумма полной эффективной себестоимости каждой проданной позиции на момент продажи, включая все обязательные ингредиенты и упаковку в одной подтверждённой валюте;
@@ -84,18 +95,21 @@ JavaScript-клиент источника содержит read-only GET-мар
 - если хотя бы для одной включённой позиции отсутствует применимая стоимость, единица, валюта или подтверждённая дата действия, COGS и оба margin-показателя для агрегата равны `unknown`, а не частичной сумме;
 - налоговая база источником не раскрыта, поэтому показатели нельзя маркировать как до- или после-налоговые до отдельного подтверждения.
 
-Выбор между `lossMaterialQuantityToString` и `productionMaterialQuantityToString` как эффективным количеством не зафиксирован: источник не раскрыл семантику этих полей. Issue #36 не должен угадывать её по названиям полей.
+Выбор между `lossMaterialQuantityToString` и `productionMaterialQuantityToString` как эффективным количеством не зафиксирован. Issue #36 может импортировать официальный product AutoCost без угадывания этой формулы; recipe-based Level 2 decomposition должна оставаться отдельной последующей моделью с явным coverage.
 
 ### Период действия и история
 
-`GetPagedTechnicalCard` возвращает строковую подпись `datePeriod` и признаки активности, но в проверенном контракте нет отдельных машиночитаемых `validFrom`/`validTo`. До подтверждения формата строка сохраняется только как source label и не используется для выбора исторической стоимости.
+Product AutoCost запрашивается на конкретную дату, а material AutoCost возвращает массив дат. Этого достаточно для основного snapshot history в #36 при условии хранения source date и запрета future leakage. Timestamp supplies присутствует в provisional snapshot-контракте, но не считается live-подтверждённым до получения непустого разрешённого ответа.
+
+`GetPagedTechnicalCard` возвращает строковую подпись `datePeriod` и признаки активности, но в проверенном контракте нет отдельных машиночитаемых `validFrom`/`validTo`. До подтверждения формата строка сохраняется только как source label и не используется для recipe-based исторической стоимости.
 
 Текущая цена меню и её история недоступны. История цен из заказов отражает только наблюдавшиеся продажи и не является полным журналом изменения меню.
 
 ## Missing-data и fail-closed правила
 
-- Пустой каталог или пустой список техкарт — допустимый ответ, отличимый от ошибки контракта.
+- Пустой каталог, список техкарт, AutoCost page, departments или supplies — допустимый ответ, отличимый от ошибки контракта.
 - Отсутствующая себестоимость остаётся `unknown`; подстановка нуля запрещена.
+- `NaN`, infinity, отрицательный cost/price и неизвестная структура monetary rows отклоняются до persistence.
 - Отсутствующий ID, обязательный признак или обязательный массив отклоняется как `SOURCE_CONTRACT_INVALID` до будущей публикации данных.
 - Неуспешный envelope отклоняется как `SOURCE_RESPONSE_UNSUCCESSFUL`.
 - Существующий импорт отчётов продолжает сохранять последний успешный набор при ошибке; product/cost import в этой задаче не добавляется.
@@ -108,13 +122,18 @@ JavaScript-клиент источника содержит read-only GET-мар
 - product catalog: success, empty, invalid;
 - production materials: success;
 - technical cards: success, empty, invalid;
+- product AutoCost: success, empty и invalid mutation test;
+- material AutoCost: success, empty и invalid mutation test;
+- supply departments: success, empty и invalid mutation test;
+- material supplies: success, empty, invalid mutation test и PascalCase failed-envelope test;
 - current permissions shape с числовыми ролями.
 
 Privacy guard проверяет allowlist полей, синтетические UUID/названия, reserved domains и отсутствие credential-like данных. Fixtures не являются копиями живых ответов.
 
 ## Решение для следующих задач
 
-1. Issue #36 нельзя реализовывать как импорт себестоимости, пока нет разрешённого денежного поля или утверждённого альтернативного источника.
-2. Каталог продуктов и состав техкарт можно импортировать отдельно, но это не разблокирует margin report.
-3. Для price-change events нужен доступ к текущим menu prices либо иной authoritative price feed; цены проданных позиций недостаточны.
-4. Любое расширение allowlist требует нового read-only подтверждения метода, параметров, permissions и fail-closed схемы.
+1. Issue #36 можно реализовывать на основе official product/material AutoCost; supplies можно подключать как дополнительную purchase-price history только после live-подтверждения непустой строки.
+2. Каталог продуктов, техкарты и AutoCost должны импортироваться раздельными checkpointed stages; частичная ошибка не должна публиковать частичный новый snapshot.
+3. #37 разблокируется после #36 и reconciliation с source UI на пилотном ресторане.
+4. Для #38 поле product AutoCost `price` сначала нужно доказать как текущую menu price; цены проданных позиций недостаточны.
+5. Любое дальнейшее расширение allowlist требует нового read-only подтверждения метода, параметров, permissions и fail-closed схемы.

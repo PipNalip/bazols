@@ -14,7 +14,27 @@ export type SourceOperation =
   | { kind: 'productCatalog' }
   | { kind: 'productionMaterials' }
   | { kind: 'productTechnicalCardSummary'; productId: string }
-  | { kind: 'technicalCards'; productId: string; startIndex: number; pageSize: number };
+  | { kind: 'technicalCards'; productId: string; startIndex: number; pageSize: number }
+  | { kind: 'productAutoCosts'; date: string; page: number; count: number }
+  | {
+      kind: 'materialAutoCosts';
+      startDate: string;
+      endDate: string;
+      page: number;
+      count: number;
+      includeHalfFinished: boolean;
+      departmentIds?: string[];
+    }
+  | { kind: 'supplyDepartments'; unitId: string }
+  | {
+      kind: 'materialSupplies';
+      beginDateTime: string;
+      endDateTime: string;
+      unitId: string;
+      departmentId: string;
+      startIndex: number;
+      pageSize: number;
+    };
 
 export type SourceEndpoint = SourceOperation['kind'];
 
@@ -87,6 +107,52 @@ export function buildSourceRoute(
         path: '/InventoryControl/TechnicalCards/GetPagedTechnicalCard',
         query: new URLSearchParams({
           productId: operation.productId,
+          startIndex: String(operation.startIndex),
+          pageSize: String(operation.pageSize),
+        }),
+      };
+    case 'productAutoCosts':
+      return {
+        endpoint: operation.kind,
+        path: '/InventoryControl/AutoCostProduct/GetAutoCostProducts',
+        query: new URLSearchParams({
+          date: operation.date,
+          page: String(operation.page),
+          count: String(operation.count),
+        }),
+      };
+    case 'materialAutoCosts': {
+      const query = new URLSearchParams({
+        startDate: operation.startDate,
+        endDate: operation.endDate,
+        page: String(operation.page),
+        count: String(operation.count),
+        isReturnHalfFinishedNotPrepareAdvance: String(operation.includeHalfFinished),
+      });
+      operation.departmentIds?.forEach((departmentId) => {
+        query.append('departmentIds', departmentId);
+      });
+      return {
+        endpoint: operation.kind,
+        path: '/InventoryControl/AutoCostMaterials/GetAutoCostMaterials',
+        query,
+      };
+    }
+    case 'supplyDepartments':
+      return {
+        endpoint: operation.kind,
+        path: '/InventoryControl/MaterialSupply/GetAvailableDepartments',
+        query: new URLSearchParams({ unitId: operation.unitId }),
+      };
+    case 'materialSupplies':
+      return {
+        endpoint: operation.kind,
+        path: '/InventoryControl/MaterialSupply/GetMaterialSuppliesWithLimit',
+        query: new URLSearchParams({
+          beginDateTime: operation.beginDateTime,
+          endDateTime: operation.endDateTime,
+          unitId: operation.unitId,
+          departmentId: operation.departmentId,
           startIndex: String(operation.startIndex),
           pageSize: String(operation.pageSize),
         }),

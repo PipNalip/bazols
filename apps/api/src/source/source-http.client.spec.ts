@@ -67,6 +67,54 @@ const operations: Array<{
     path: '/InventoryControl/TechnicalCards/GetPagedTechnicalCard',
     query: { pageSize: '20', productId: 'product-1', startIndex: '0' },
   },
+  {
+    operation: { kind: 'productAutoCosts', date: '2026-09-16', page: 0, count: 500 },
+    path: '/InventoryControl/AutoCostProduct/GetAutoCostProducts',
+    query: { count: '500', date: '2026-09-16', page: '0' },
+  },
+  {
+    operation: {
+      kind: 'materialAutoCosts',
+      startDate: '2026-09-15T00:00:00.000Z',
+      endDate: '2026-09-16',
+      page: 1,
+      count: 500,
+      includeHalfFinished: false,
+    },
+    path: '/InventoryControl/AutoCostMaterials/GetAutoCostMaterials',
+    query: {
+      count: '500',
+      endDate: '2026-09-16',
+      isReturnHalfFinishedNotPrepareAdvance: 'false',
+      page: '1',
+      startDate: '2026-09-15T00:00:00.000Z',
+    },
+  },
+  {
+    operation: { kind: 'supplyDepartments', unitId: 'unit-1' },
+    path: '/InventoryControl/MaterialSupply/GetAvailableDepartments',
+    query: { unitId: 'unit-1' },
+  },
+  {
+    operation: {
+      kind: 'materialSupplies',
+      beginDateTime: '2026-09-15T00:00:00.000Z',
+      endDateTime: '2026-09-16T23:59:59.999Z',
+      unitId: 'unit-1',
+      departmentId: 'department-1',
+      startIndex: 0,
+      pageSize: 50,
+    },
+    path: '/InventoryControl/MaterialSupply/GetMaterialSuppliesWithLimit',
+    query: {
+      beginDateTime: '2026-09-15T00:00:00.000Z',
+      departmentId: 'department-1',
+      endDateTime: '2026-09-16T23:59:59.999Z',
+      pageSize: '50',
+      startIndex: '0',
+      unitId: 'unit-1',
+    },
+  },
 ];
 
 function clientWith(transport: typeof fetch): SourceHttpClient {

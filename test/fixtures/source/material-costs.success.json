@@ -1,0 +1,32 @@
+{
+  "isSuccess": true,
+  "isFailed": false,
+  "data": {
+    "totalRows": 1,
+    "values": [
+      {
+        "materialId": "80000000-0000-4000-8000-000000000001",
+        "materialName": "Synthetic Material Alpha",
+        "materialType": 1,
+        "materialUnitOfMeasure": 2,
+        "autoCostMaterialViewsByDates": [
+          {
+            "date": "2026-09-16T00:00:00.000Z",
+            "autoCostMaterialViews": [
+              {
+                "autoCost": 42.25,
+                "currency": 1,
+                "departmentId": "90000000-0000-4000-8000-000000000001",
+                "materialId": "80000000-0000-4000-8000-000000000001",
+                "materialName": "Synthetic Material Alpha",
+                "materialUnitOfMeasure": 2,
+                "unitId": "70000000-0000-4000-8000-000000000001"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "errors": []
+}

@@ -12,19 +12,57 @@ const expectedFixtureNames = [
   'employees-rating.empty.json',
   'employees-rating.invalid.json',
   'employees-rating.success.json',
+  'material-costs.empty.json',
+  'material-costs.success.json',
+  'material-supplies.empty.json',
+  'material-supplies.success.json',
   'permissions.current.json',
   'permissions.success.json',
+  'product-costs.empty.json',
+  'product-costs.success.json',
   'product-technical-card-summary.success.json',
   'production-materials.success.json',
   'products.empty.json',
   'products.invalid.json',
   'products.success.json',
+  'supply-departments.empty.json',
+  'supply-departments.success.json',
   'technical-cards.empty.json',
   'technical-cards.invalid.json',
   'technical-cards.success.json',
 ];
 const allowedKeys = new Set([
+  'Data',
+  'DepartmentId',
+  'Disabled',
+  'Errors',
+  'Group',
+  'Id',
+  'IsFailed',
+  'IsSuccess',
+  'Items',
+  'MaterialId',
+  'MaterialName',
+  'MaterialSupplies',
+  'Metrics',
+  'Price',
+  'Selected',
+  'SupplyDateTime',
+  'Tax',
+  'Text',
+  'TotalRows',
+  'UnitId',
+  'UnitOfMeasure',
+  'Value',
+  'WarningEntries',
+  'Warnings',
   'areTechnicalCardsExists',
+  'autoCost',
+  'autoCostMaterialViews',
+  'autoCostMaterialViewsByDates',
+  'autoCostProductByTradeArea',
+  'autoCostProductByUnit',
+  'averageAutoCost',
   'calculationItems',
   'cards',
   'category',
@@ -33,9 +71,12 @@ const allowedKeys = new Set([
   'data',
   'date',
   'datePeriod',
+  'departmentId',
   'displayName',
   'email',
   'errors',
+  'extraCharge',
+  'fc',
   'id',
   'isActive',
   'isActiveCurrentCard',
@@ -43,11 +84,15 @@ const allowedKeys = new Set([
   'isFailed',
   'isRemoved',
   'isSuccess',
+  'isTotalCost',
   'items',
   'lossMaterialQuantityToString',
   'materialCategory',
+  'materialId',
   'materialIsRemoved',
   'materialName',
+  'materialType',
+  'materialUnitOfMeasure',
   'name',
   'nameDepartment',
   'nameUnit',
@@ -65,18 +110,21 @@ const allowedKeys = new Set([
   'productName',
   'productPrice',
   'productType',
+  'productUnitOfMeasure',
   'productionMaterialQuantityToString',
   'roles',
   'rows',
   'text',
   'totalRows',
   'totalrows',
+  'tradeAreaId',
   'type',
   'unitId',
   'unitOfMeasure',
   'unitOfMeasureToShortString',
   'units',
   'value',
+  'values',
   'warningEntries',
   'warnings',
 ]);
@@ -107,11 +155,23 @@ function assertSafeString(value: string, key: string, location: string): void {
   });
   expect(nonReservedDomain, `${location} contains a non-reserved domain`).toBeUndefined();
 
-  if (key === 'id' || key === 'productId' || key === 'unitId') {
+  if (
+    key === 'id' ||
+    key === 'Id' ||
+    key === 'DepartmentId' ||
+    key === 'MaterialId' ||
+    key === 'UnitId' ||
+    key === 'Value' ||
+    key === 'departmentId' ||
+    key === 'materialId' ||
+    key === 'productId' ||
+    key === 'tradeAreaId' ||
+    key === 'unitId'
+  ) {
     expect(uuid.test(value), `${location} must contain a synthetic UUID`).toBe(true);
     return;
   }
-  if (key === 'date') {
+  if (key === 'date' || key === 'SupplyDateTime') {
     expect(isoDate.test(value), `${location} must contain an ISO timestamp`).toBe(true);
     return;
   }
@@ -141,6 +201,8 @@ function assertSafeString(value: string, key: string, location: string): void {
   }
   if (
     key === 'displayName' ||
+    key === 'MaterialName' ||
+    key === 'Text' ||
     key === 'materialName' ||
     key === 'name' ||
     key === 'nameDepartment' ||

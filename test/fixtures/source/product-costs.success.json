@@ -1,0 +1,28 @@
+{
+  "totalRows": 1,
+  "values": [
+    {
+      "productId": "60000000-0000-4000-8000-000000000001",
+      "productName": "Synthetic Product Alpha",
+      "productUnitOfMeasure": 1,
+      "category": 2,
+      "autoCostProductByTradeArea": [
+        {
+          "tradeAreaId": "a0000000-0000-4000-8000-000000000001",
+          "averageAutoCost": 120.5,
+          "extraCharge": 65.15,
+          "fc": 60.25,
+          "price": 199.0,
+          "autoCostProductByUnit": [
+            {
+              "autoCost": 120.5,
+              "isTotalCost": true,
+              "productId": "60000000-0000-4000-8000-000000000001",
+              "unitId": "70000000-0000-4000-8000-000000000001"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

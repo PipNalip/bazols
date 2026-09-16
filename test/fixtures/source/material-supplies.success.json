@@ -1,0 +1,31 @@
+{
+  "IsSuccess": true,
+  "IsFailed": false,
+  "Data": {
+    "TotalRows": 1,
+    "MaterialSupplies": [
+      {
+        "Id": "b0000000-0000-4000-8000-000000000001",
+        "DepartmentId": "90000000-0000-4000-8000-000000000001",
+        "UnitId": "70000000-0000-4000-8000-000000000001",
+        "SupplyDateTime": "2026-09-16T09:30:00.000Z",
+        "Items": [
+          {
+            "Id": "c0000000-0000-4000-8000-000000000001",
+            "MaterialId": "80000000-0000-4000-8000-000000000001",
+            "MaterialName": "Synthetic Material Alpha",
+            "Price": 42.25,
+            "Tax": 7,
+            "Metrics": {
+              "Value": 10.0,
+              "UnitOfMeasure": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "Errors": [],
+  "WarningEntries": [],
+  "Warnings": []
+}
