@@ -1,24 +1,28 @@
-import { CssBaseline, ThemeProvider, Typography, createTheme } from '@mui/material';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { CssBaseline, ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
 
-const theme = createTheme({
-  palette: {
-    background: { default: '#f7f6f1' },
-    primary: { main: '#66806a' },
-    text: { primary: '#18352a' },
-  },
+import { AppRouter } from './app/router.js';
+import { AuthProvider } from './auth/AuthProvider.js';
+import { bazolsTheme } from './theme/theme.js';
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } },
 });
 
-function App() {
-  return (
-    <ThemeProvider theme={theme}>
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <ThemeProvider theme={bazolsTheme}>
       <CssBaseline />
-      <main style={{ padding: '32px' }}>
-        <Typography component="h1" variant="h3">Bazols</Typography>
-        <Typography sx={{ marginTop: 2 }}>Рабочее пространство отчётов готовится.</Typography>
-      </main>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRouter />
+          </BrowserRouter>
+        </AuthProvider>
+      </QueryClientProvider>
     </ThemeProvider>
-  );
-}
-
-createRoot(document.getElementById('root')!).render(<App />);
+  </StrictMode>,
+);

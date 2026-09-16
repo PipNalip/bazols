@@ -15,6 +15,9 @@ import type { AppEnv } from './config/env.schema.js';
 import { APP_ENV } from './config/tokens.js';
 import { PrismaService } from './db/prisma.service.js';
 import { HealthController } from './health.controller.js';
+import { EmployeeRankingService } from './reports/employee-ranking.service.js';
+import { ProductRankingService } from './reports/product-ranking.service.js';
+import { ReportsController } from './reports/reports.controller.js';
 import { RestaurantAccessService } from './restaurants/restaurant-access.service.js';
 import { RestaurantsController } from './restaurants/restaurants.controller.js';
 import { RestaurantsService } from './restaurants/restaurants.service.js';
@@ -43,6 +46,7 @@ export class AppModule {
         SourceDiscoveryController,
         SyncController,
         UsersController,
+        ReportsController,
       ],
       providers: [
         { provide: APP_FILTER, useClass: ApiExceptionFilter },
@@ -94,6 +98,8 @@ export class AppModule {
         CsrfGuard,
         RolesGuard,
         RestaurantAccessService,
+        EmployeeRankingService,
+        ProductRankingService,
         RestaurantsService,
         SyncRunRepository,
         SyncService,

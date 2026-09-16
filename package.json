@@ -11,7 +11,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run",
+    "test": "NODE_ENV=test node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run",
+    "test:e2e": "npm run build && node --env-file-if-exists=.env ./node_modules/@playwright/test/cli.js test",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "build": "npm run prisma:generate && npm run build --workspaces --if-present",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^26.5.1",
     "eslint": "^10.10.0",
     "globals": "^17.12.0",
