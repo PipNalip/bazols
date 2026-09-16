@@ -3,7 +3,7 @@
 **Статус:** утверждено к локальной реализации 2026-09-15; Production delivery остаётся отдельным backlog/gate
 **Источник требований:** `docs/specs/bazols-reporting-discovery.md`
 
-**Статус Phase 3 на 2026-09-16:** локально реализованы REQ-007, REQ-008, manager-часть REQ-009/010 и AC-11/12: Reports API, React/MUI shell, login/session/logout, выбор ресторана и периода, обе таблицы и обязательные состояния. Browser-сценарий использует реальные NestJS, Vite и PostgreSQL entry points с синтетической fixture. Admin React-экраны из пунктов 4–5 REQ-009 и полный fake-source/worker сценарий AC-14 остаются следующей фазой; Production activation не выполнялась.
+**Статус локального MVP на 2026-09-16:** реализованы manager/admin workflows, ручная синхронизация, security/privacy regression checks и AC-11–14. Полный browser-сценарий запускает fake source, реальные NestJS API, отдельный worker, Vite и PostgreSQL; Production activation не выполнялась и остаётся отдельным gate.
 
 ## 1. Цель
 

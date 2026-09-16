@@ -46,13 +46,15 @@ Build once and promote the same verified artifact when the selected platform sup
 Fill these as soon as the stack is selected. Until then, inspect the manifest and README; do not guess.
 
 ```text
-Install:    npm install --include=dev
+Install:    npm ci --include=dev
+Database:   npm run db:up && npm run db:migrate
 Run API:    npm run build && npm run start --workspace @bazols/api
+Run worker: npm run start:worker --workspace @bazols/api
 Run web:    npm run dev --workspace @bazols/web
-Test:       npm test && sh tests/test-template.sh
+Test:       npm test && npm run test:integration && npm run test:e2e
 Lint:       npm run lint && npm run typecheck
 Build:      npm run build
-Self-check: sh scripts/validate-template.sh
+Self-check: sh scripts/validate-template.sh && sh tests/test-template.sh
 ```
 
 When adapting this template into an application, replace every `NOT_SELECTED` value and keep this block accurate.

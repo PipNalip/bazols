@@ -14,11 +14,11 @@ function json(value: unknown, status = 200) {
   });
 }
 
-function renderPage() {
+function renderPage(pollInterval?: number) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <ReportsPage today="2026-09-16" />
+      <ReportsPage today="2026-09-16" {...(pollInterval === undefined ? {} : { pollInterval })} />
     </QueryClientProvider>,
   );
 }
@@ -29,6 +29,28 @@ afterEach(() => {
 });
 
 describe('ReportsPage', () => {
+  it('refreshes an empty report while a synchronization is active', async () => {
+    let restaurantCalls = 0;
+    let reportCalls = 0;
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/restaurants') {
+        restaurantCalls += 1;
+        return json([{ id: 'restaurant-a', displayName: 'Restaurant A', timezone: 'UTC', lastSuccessfulSyncAt: restaurantCalls > 1 ? '2026-09-16T10:00:00.000Z' : null, latestSync: { status: restaurantCalls > 1 ? 'SUCCEEDED' : 'RUNNING', safeErrorCode: null } }]);
+      }
+      if (url.includes('/reports/employees')) {
+        reportCalls += 1;
+        return json(reportCalls > 1 ? [{ rank: 1, employeeId: 'employee-a', name: 'Анна', revenue: '100.00', ordersCount: 1, averageCheque: '100.00', currency: 'RUB' }] : []);
+      }
+      return json([]);
+    }));
+
+    renderPage(10);
+
+    expect(await screen.findByText('Синхронизация выполняется. Отчёт обновится после завершения.')).toBeInTheDocument();
+    expect(await screen.findByText('Анна')).toBeInTheDocument();
+  });
+
   it('shows sync context, both rankings and requests the selected metric', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);

@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider.js';
 import { LoginPage } from '../auth/LoginPage.js';
+import { SyncPage } from '../admin/SyncPage.js';
+import { UsersPage } from '../admin/UsersPage.js';
 import { ReportsPage } from '../reports/ReportsPage.js';
 import { AppShell } from './AppShell.js';
 
@@ -36,6 +38,12 @@ export function AppRouter() {
     <AppShell user={auth.user} onLogout={auth.logout}>
       <Routes>
         <Route path="/" element={<ReportsPage />} />
+        {auth.user.role === 'ADMIN' ? (
+          <>
+            <Route path="/admin/users" element={<UsersPage csrfToken={auth.csrfToken} />} />
+            <Route path="/admin/sync" element={<SyncPage csrfToken={auth.csrfToken} />} />
+          </>
+        ) : null}
         <Route path="*" element={<Navigate replace to="/" />} />
       </Routes>
     </AppShell>
