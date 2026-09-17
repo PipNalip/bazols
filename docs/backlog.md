@@ -18,7 +18,7 @@ These items do not block local MVP implementation, tests, local Docker builds or
 
 ## Product follow-ups outside reporting MVP
 
-- Cost/margin reporting: issue #36 now imports restaurant-scoped product/material AutoCost history with strict pagination, decimal persistence and atomic publication. Reconcile AutoCost, reported product price and material currency against the source UI before calculating or displaying margin. Enable supply-price history only after a non-empty live contract is verified. See `docs/specs/bazols-cost-history.md` and `docs/specs/bazols-product-data-discovery.md`.
+- Cost/margin follow-ups: issue #36 imports restaurant-scoped product/material AutoCost history, and issue #37 uses product AutoCost for RUB-only COGS, gross margin and coverage reporting. Recipe/material attribution, historical daily backfill and multi-currency conversion remain outside the current report. Enable supply-price history only after a non-empty live contract is verified. See `docs/specs/bazols-cost-history.md` and `docs/specs/bazols-product-data-discovery.md`.
 - Price changes: current menu-price endpoints are forbidden for every issued unit/role checked. Obtain least-privilege read access or select another authoritative price feed, then define the notification baseline and channel.
 - Define data retention and deletion procedure.
 - Add scheduling only after manual synchronization is proven reliable.

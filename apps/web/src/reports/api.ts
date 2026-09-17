@@ -2,7 +2,7 @@ import {
   employeeRankingResponseSchema,
   productRankingResponseSchema,
   type EmployeeRankingRow,
-  type ProductRankingRow,
+  type ProductRankingResponse,
 } from '@bazols/contracts';
 
 import { apiRequest } from '../auth/api.js';
@@ -21,7 +21,7 @@ export type RestaurantOption = {
 };
 
 export type EmployeeSort = 'revenue' | 'ordersCount' | 'averageCheque';
-export type ProductSort = 'unitsSold' | 'revenue';
+export type ProductSort = 'unitsSold' | 'revenue' | 'cogs' | 'grossMargin';
 
 export function listRestaurants(): Promise<RestaurantOption[]> {
   return apiRequest<RestaurantOption[]>('/api/restaurants');
@@ -48,7 +48,7 @@ export async function loadProductRanking(
   from: string,
   to: string,
   sort: ProductSort,
-): Promise<ProductRankingRow[]> {
+): Promise<ProductRankingResponse> {
   const value = await apiRequest<unknown>(
     `/api/restaurants/${restaurantId}/reports/products?${query({ from, to, sort })}`,
   );

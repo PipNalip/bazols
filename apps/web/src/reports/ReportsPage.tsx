@@ -178,10 +178,12 @@ export function ReportsPage({
                 <Button aria-pressed={employeeSort === 'averageCheque'} variant={employeeSort === 'averageCheque' ? 'contained' : 'outlined'} onClick={() => setEmployeeSort('averageCheque')}>По среднему чеку</Button>
               </ButtonGroup>
             ) : (
-              <ButtonGroup aria-label="Сортировка товаров" size="small">
+              <Box aria-label="Сортировка товаров" role="group" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 <Button aria-pressed={productSort === 'unitsSold'} variant={productSort === 'unitsSold' ? 'contained' : 'outlined'} onClick={() => setProductSort('unitsSold')}>По количеству</Button>
                 <Button aria-pressed={productSort === 'revenue'} variant={productSort === 'revenue' ? 'contained' : 'outlined'} onClick={() => setProductSort('revenue')}>По выручке</Button>
-              </ButtonGroup>
+                <Button aria-pressed={productSort === 'cogs'} variant={productSort === 'cogs' ? 'contained' : 'outlined'} onClick={() => setProductSort('cogs')}>По себестоимости</Button>
+                <Button aria-pressed={productSort === 'grossMargin'} variant={productSort === 'grossMargin' ? 'contained' : 'outlined'} onClick={() => setProductSort('grossMargin')}>По валовой марже</Button>
+              </Box>
             )}
           </Box>
 
@@ -197,12 +199,14 @@ export function ReportsPage({
             <Alert severity="error" action={<Button onClick={() => void current.refetch()}>Повторить</Button>}>
               Не удалось загрузить отчёт.
             </Alert>
-          ) : current.data?.length === 0 ? (
+          ) : tab === 'employees' && employees.data?.length === 0 ? (
+            <ReportMessage title="За период нет данных" detail="Измените период или дождитесь следующей синхронизации." />
+          ) : tab === 'products' && products.data?.rows.length === 0 ? (
             <ReportMessage title="За период нет данных" detail="Измените период или дождитесь следующей синхронизации." />
           ) : tab === 'employees' ? (
             <EmployeeRankingTable rows={employees.data ?? []} />
           ) : (
-            <ProductRankingTable rows={products.data ?? []} />
+            <ProductRankingTable coverage={products.data!.coverage} rows={products.data!.rows} />
           )}
         </Box>
       </Paper>

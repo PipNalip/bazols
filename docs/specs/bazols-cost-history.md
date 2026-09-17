@@ -1,6 +1,6 @@
 # Product and material AutoCost history
 
-Status: implemented locally for issue #36; not deployed.
+Status: implemented for issue #36 and consumed by the issue #37 product margin report; not deployed.
 
 ## Outcome
 
@@ -32,10 +32,10 @@ A successful `SyncRun` exposes separate `productCostSnapshotsCount` and `materia
 
 ## Not included
 
-- margin calculations or cost attribution to individual order items;
-- cost or price screens, alerts or public reporting API;
+- material-cost attribution, recipe decomposition or purchase-price calculations;
+- price screens or alerts;
 - historical daily product backfill inside one broad synchronization;
 - supply-price history;
 - scheduling, deployment or retention changes.
 
-The next product step may calculate margin only after source UI reconciliation confirms the meaning and currency of AutoCost and reported product price.
+Issue #37 attributes the latest non-future product AutoCost to each sold item, publishes COGS, gross margin and cost coverage, and leaves incomplete rows unknown. The 2026-09-17 reconciliation permits that Level 1 calculation for `RUB` only. `reportedPrice` remains unverified and is not used as a current menu price.

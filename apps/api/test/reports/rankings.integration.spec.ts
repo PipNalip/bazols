@@ -94,6 +94,22 @@ describe('ranking reports HTTP API', () => {
         status: 'SUCCEEDED',
       },
     });
+    await prisma.productCostSnapshot.create({
+      data: {
+        restaurantId: restaurant.id,
+        productId: product.id,
+        lastSeenSyncRunId: sync.id,
+        effectiveDate: new Date('2026-09-01T00:00:00.000Z'),
+        sourceUnitId: restaurant.sourceUnitId,
+        sourceTradeAreaId: 'trade-area-a',
+        autoCost: '25.25',
+        averageAutoCost: '25.25',
+        reportedPrice: '125.50',
+        fc: '0',
+        extraCharge: '0',
+        isTotalCost: false,
+      },
+    });
     const order = await prisma.order.create({
       data: {
         restaurantId: restaurant.id,
@@ -140,14 +156,18 @@ describe('ranking reports HTTP API', () => {
       )
       .set('Cookie', manager.cookie)
       .expect(200);
-    expect(products.body).toEqual([
-      expect.objectContaining({
+    expect(products.body).toEqual({
+      rows: [expect.objectContaining({
         rank: 1,
         productId: 'product-a',
         unitsSold: 1,
         revenue: '125.50',
-      }),
-    ]);
+        cogs: '25.25',
+        grossMargin: '100.25',
+        grossMarginRate: '79.88',
+      })],
+      coverage: { costedUnits: 1, totalUnits: 1, percentage: '100.00' },
+    });
 
     await app.close();
   });
@@ -167,6 +187,12 @@ describe('ranking reports HTTP API', () => {
     await request(app.getHttpServer())
       .get(
         `/api/restaurants/${restaurant.id}/reports/employees?from=2026-09-01&to=2026-09-01&sort=revenue`,
+      )
+      .set('Cookie', manager.cookie)
+      .expect(403);
+    await request(app.getHttpServer())
+      .get(
+        `/api/restaurants/${restaurant.id}/reports/products?from=2026-09-01&to=2026-09-01&sort=grossMargin`,
       )
       .set('Cookie', manager.cookie)
       .expect(403);
