@@ -37,9 +37,12 @@ function body(payload: unknown): Buffer {
 
 async function clearDatabase(): Promise<void> {
   await prisma.auditEvent.deleteMany();
+  await prisma.productCostSnapshot.deleteMany();
+  await prisma.materialCostSnapshot.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.material.deleteMany();
   await prisma.employee.deleteMany();
   await prisma.rawSnapshot.deleteMany();
   await prisma.syncRun.deleteMany();
@@ -344,9 +347,11 @@ describe('ImportPageService', () => {
       await source.close();
     }
 
-    await expect(prisma.rawSnapshot.count()).resolves.toBe(2);
+    await expect(prisma.rawSnapshot.count()).resolves.toBe(4);
     await expect(prisma.employee.count()).resolves.toBe(2);
     await expect(prisma.order.count()).resolves.toBe(3);
+    await expect(prisma.productCostSnapshot.count()).resolves.toBe(1);
+    await expect(prisma.materialCostSnapshot.count()).resolves.toBe(1);
     await expect(prisma.orderItem.count()).resolves.toBe(4);
   });
 

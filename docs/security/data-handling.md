@@ -6,7 +6,7 @@ Bazols processes restaurant reporting data that may contain employee and custome
 
 ## Source boundary
 
-- The source integration is read-only and exposes eight allowlisted GET operations: four reporting operations (authenticate, permissions, role selection and employee rating) plus four product-discovery operations (product catalog, production materials, product technical-card summary and paged technical cards). Product-discovery responses are contract-validated but are not yet imported or published.
+- The source integration is read-only and exposes allowlisted GET operations for authentication/context selection, employee reporting, product/material AutoCost and product discovery. AutoCost responses are contract-validated and imported; product-discovery responses are not published.
 - Arbitrary URLs and mutation methods are not exposed by the connector.
 - HTTPS is required except for loopback-only test servers in `NODE_ENV=test`.
 - Cross-origin redirects and same-origin redirects outside the route allowlist are rejected.
@@ -16,7 +16,7 @@ Bazols processes restaurant reporting data that may contain employee and custome
 
 - Raw source response bytes are encrypted with authenticated encryption before PostgreSQL storage.
 - `RAW_SNAPSHOT_ENCRYPTION_KEY` is external configuration and must be backed up separately from the database.
-- Normalized reporting rows remain scoped by `restaurantId`.
+- Normalized reporting and AutoCost rows remain scoped by `restaurantId`; source unit/trade-area/department dimensions are retained on cost snapshots.
 - A failed import does not publish partial normalized data and does not replace the last successful report.
 - MVP records and encrypted snapshots are retained indefinitely until the separately approved retention/deletion procedure is implemented.
 - Authentication stores Argon2 password hashes and hashed opaque session tokens; cookies are `HttpOnly` and `SameSite=Strict`.
@@ -40,4 +40,4 @@ E2E must use a dedicated disposable database. Never run browser/integration suit
 - Do not copy raw snapshots into tickets. Record only run ID, safe code and correlation ID.
 - Database backup activation, retention, deletion and restore rehearsal remain Production delivery decisions in `docs/backlog.md`; local MVP completion does not claim they are operational.
 - A Docker volume is not a backup. Any future backup contains normalized PII; the snapshot encryption key must be stored separately, and losing it makes encrypted snapshots unrecoverable.
-- Cost/margin data and technical cards are not imported or published by the reporting MVP. Discovery confirmed technical-card composition but no authoritative monetary cost.
+- Product/material AutoCost evidence is imported but not published in reports. Margin, current-price claims and technical-card composition remain unavailable until source UI/currency reconciliation is approved.

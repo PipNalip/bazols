@@ -145,6 +145,48 @@ describe('SourceConnector', () => {
     expect(result.pages).toHaveLength(1);
   });
 
+  it('collects product and material costs with exact date and page conventions', async () => {
+    const setup = await connector();
+    const captured: string[] = [];
+
+    const result = await setup.connector.collectCostHistory(request, (page) => {
+      captured.push(`${page.endpoint}:${page.page}`);
+    });
+
+    expect(result.productPages).toHaveLength(1);
+    expect(result.materialPages).toHaveLength(1);
+    expect(captured).toEqual(['productAutoCosts:0', 'materialAutoCosts:1']);
+    expect(setup.source.calls).toContain('productAutoCosts:0:2026-09-30');
+    expect(setup.source.calls).toContain(
+      'materialAutoCosts:1:2026-09-01T00:00:00.000Z:2026-09-30',
+    );
+  });
+
+  it('captures malformed cost bytes before failing closed', async () => {
+    const setup = await connector({ malformedCosts: true });
+    const captured: Buffer[] = [];
+
+    await expect(
+      setup.connector.collectCostHistory(request, (page) => {
+        captured.push(page.body);
+      }),
+    ).rejects.toMatchObject({ code: 'SOURCE_CONTRACT_INVALID' });
+    expect(captured).toHaveLength(1);
+  });
+
+  it('collects non-first pages from both cost endpoints', async () => {
+    const setup = await connector({ multiPageCosts: true });
+
+    const result = await setup.connector.collectCostHistory({ ...request, pageSize: 1 });
+
+    expect(result.productPages).toHaveLength(2);
+    expect(result.materialPages).toHaveLength(2);
+    expect(setup.source.calls).toContain('productAutoCosts:1:2026-09-30');
+    expect(setup.source.calls).toContain(
+      'materialAutoCosts:2:2026-09-01T00:00:00.000Z:2026-09-30',
+    );
+  });
+
   it('does not expose credentials or response PII in failures', async () => {
     const setup = await connector(
       { authFailure: true, responseSentinel: 'response-pii-sentinel' },

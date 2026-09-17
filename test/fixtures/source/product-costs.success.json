@@ -15,7 +15,7 @@
           "price": 199.0,
           "autoCostProductByUnit": [
             {
-              "autoCost": 120.5,
+              "autoCost": 120.500001,
               "isTotalCost": true,
               "productId": "60000000-0000-4000-8000-000000000001",
               "unitId": "70000000-0000-4000-8000-000000000001"

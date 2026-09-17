@@ -12,10 +12,13 @@ const restaurantSourceId = 'e2e-phase3-restaurant';
 async function removeFixture() {
   const restaurant = await prisma.restaurant.findUnique({ where: { sourceUnitId: restaurantSourceId } });
   if (restaurant) {
+    await prisma.productCostSnapshot.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.materialCostSnapshot.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.orderItem.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.order.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.employee.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.product.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.material.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.syncRun.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.userRestaurant.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.restaurant.delete({ where: { id: restaurant.id } });
