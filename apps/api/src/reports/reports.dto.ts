@@ -27,6 +27,6 @@ export const productReportQuerySchema = z
   .object({
     from: isoDate,
     to: isoDate,
-    sort: z.enum(['unitsSold', 'revenue']),
+    sort: z.enum(['unitsSold', 'revenue', 'cogs', 'grossMargin']),
   })
   .refine((value) => value.from <= value.to);

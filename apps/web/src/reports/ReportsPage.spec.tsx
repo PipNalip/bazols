@@ -79,16 +79,33 @@ describe('ReportsPage', () => {
         ]);
       }
       if (url.includes('/reports/products')) {
-        return json([
-          {
-            rank: 1,
-            productId: 'product-a',
-            name: 'Айран',
-            unitsSold: 3,
-            revenue: '125.50',
-            currency: 'RUB',
-          },
-        ]);
+        return json({
+          rows: [
+            {
+              rank: 1,
+              productId: 'product-a',
+              name: 'Айран',
+              unitsSold: 3,
+              revenue: '125.50',
+              cogs: '75.30',
+              grossMargin: '50.20',
+              grossMarginRate: '40.00',
+              currency: 'RUB',
+            },
+            {
+              rank: 2,
+              productId: 'product-b',
+              name: 'Неизвестный товар',
+              unitsSold: 1,
+              revenue: '20.00',
+              cogs: null,
+              grossMargin: null,
+              grossMarginRate: null,
+              currency: 'RUB',
+            },
+          ],
+          coverage: { costedUnits: 3, totalUnits: 4, percentage: '75.00' },
+        });
       }
       return json({}, 404);
     });
@@ -104,8 +121,15 @@ describe('ReportsPage', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Товары' }));
     expect(await screen.findByText('Айран')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'По выручке' }));
-    expect(screen.getByRole('button', { name: 'По выручке' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('columnheader', { name: 'Себестоимость' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Валовая маржа' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Маржа %' })).toBeInTheDocument();
+    expect(screen.getByText('Покрытие себестоимостью: 3 из 4 ед. (75,00 %)')).toBeInTheDocument();
+    expect(screen.getAllByText('Нет данных')).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'По себестоимости' }));
+    expect(screen.getByRole('button', { name: 'По себестоимости' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'По валовой марже' }));
+    expect(screen.getByRole('button', { name: 'По валовой марже' })).toHaveAttribute('aria-pressed', 'true');
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
@@ -113,9 +137,9 @@ describe('ReportsPage', () => {
         expect.anything(),
       ),
     );
-    expect(fetchMock.mock.calls.map(([url]) => String(url)).some((url) => url.includes('sort=revenue'))).toBe(
-      true,
-    );
+    const productUrls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(productUrls.some((url) => url.includes('sort=cogs'))).toBe(true);
+    expect(productUrls.some((url) => url.includes('sort=grossMargin'))).toBe(true);
   });
 
   it('guides a user who has no assigned restaurants', async () => {

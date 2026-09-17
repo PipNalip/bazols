@@ -138,6 +138,22 @@ test.beforeAll(async () => {
       },
     ],
   });
+  await prisma.productCostSnapshot.create({
+    data: {
+      restaurantId: restaurant.id,
+      productId: ayran.id,
+      lastSeenSyncRunId: syncRun.id,
+      effectiveDate: new Date('2026-09-01T00:00:00.000Z'),
+      sourceUnitId: restaurantSourceId,
+      sourceTradeAreaId: 'e2e-trade-area',
+      autoCost: '40.00',
+      averageAutoCost: '40.00',
+      reportedPrice: '100.00',
+      fc: '0',
+      extraCharge: '0',
+      isTotalCost: false,
+    },
+  });
 });
 
 test.afterAll(async () => {
@@ -164,6 +180,15 @@ test('manager logs in, chooses a period and explores both rankings', async ({ pa
   await page.getByRole('tab', { name: 'Товары' }).click();
   const products = page.getByRole('table', { name: 'Рейтинг товаров' });
   await expect(products.getByRole('row').nth(1)).toContainText('Борщ');
-  await page.getByRole('button', { name: 'По выручке' }).click();
+  await expect(products.getByRole('columnheader', { name: 'Себестоимость' })).toBeVisible();
+  await expect(products.getByRole('columnheader', { name: 'Валовая маржа' })).toBeVisible();
+  await expect(products.getByRole('columnheader', { name: 'Маржа %' })).toBeVisible();
+  await expect(page.getByText('Покрытие себестоимостью: 1 из 3 ед. (33,33 %)')).toBeVisible();
+  await expect(products.getByRole('row').filter({ hasText: 'Борщ' })).toContainText('Нет данных');
+  await page.getByRole('button', { name: 'По себестоимости' }).click();
   await expect(products.getByRole('row').nth(1)).toContainText('Айран');
+  await expect(products.getByRole('row').nth(1)).toContainText('40,00');
+  await page.getByRole('button', { name: 'По валовой марже' }).click();
+  await expect(products.getByRole('row').nth(1)).toContainText('Айран');
+  await expect(products.getByRole('row').nth(1)).toContainText('60,00');
 });

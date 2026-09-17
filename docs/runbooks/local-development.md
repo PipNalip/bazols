@@ -61,7 +61,7 @@ The API process accepts requests and queues imports. The worker is a separate re
 4. Enter a display name and an IANA timezone, select the discovered unit and role, and save.
 5. Select an inclusive date range and start synchronization.
 6. Wait for **Завершена** in the run journal.
-7. Open **Рейтинги** and verify employee and product tables.
+7. Open **Рейтинги** and verify employee and product tables, including product cost coverage, COGS and gross margin.
 8. Open **Пользователи** to create a manager and assign one or more restaurants.
 
 ## Verification

@@ -25,4 +25,20 @@ describe('report query date validation', () => {
       }).success,
     ).toBe(true);
   });
+
+  it.each(['cogs', 'grossMargin'])('accepts product sort %s', (sort) => {
+    expect(productReportQuerySchema.safeParse({
+      from: '2026-09-01',
+      to: '2026-09-01',
+      sort,
+    }).success).toBe(true);
+  });
+
+  it('rejects an unknown product sort', () => {
+    expect(productReportQuerySchema.safeParse({
+      from: '2026-09-01',
+      to: '2026-09-01',
+      sort: 'profit',
+    }).success).toBe(false);
+  });
 });

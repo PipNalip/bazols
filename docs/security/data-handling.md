@@ -40,4 +40,4 @@ E2E must use a dedicated disposable database. Never run browser/integration suit
 - Do not copy raw snapshots into tickets. Record only run ID, safe code and correlation ID.
 - Database backup activation, retention, deletion and restore rehearsal remain Production delivery decisions in `docs/backlog.md`; local MVP completion does not claim they are operational.
 - A Docker volume is not a backup. Any future backup contains normalized PII; the snapshot encryption key must be stored separately, and losing it makes encrypted snapshots unrecoverable.
-- Product/material AutoCost evidence is imported but not published in reports. Margin, current-price claims and technical-card composition remain unavailable until source UI/currency reconciliation is approved.
+- Product AutoCost is published only as derived RUB-only COGS, gross margin and aggregate coverage in the authorized restaurant report after the 2026-09-17 reconciliation. Raw cost snapshots, material AutoCost, current-price claims and technical-card composition are not exposed to the frontend; `reportedPrice` remains unverified and must not be presented as the current menu price.

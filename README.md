@@ -2,7 +2,7 @@
 
 Внутренняя система отчётности ресторанов: API и web-интерфейс для отчётов по сотрудникам и товарам. Репозиторий развивается как TypeScript npm-workspace с NestJS API, React/MUI frontend и общими runtime-контрактами.
 
-Сейчас реализованы health-срез, безопасная интеграция с источником, DB-backed очередь и worker, ручной admin-only sync API, Argon2id login с server-side sessions/CSRF, роли и администрирование менеджеров и ресторанов. Raw responses шифруются до записи, а полный импорт продаж и product/material AutoCost history атомарен и идемпотентен. Reports API пока считает только рейтинги сотрудников и товаров; cost/margin-отчёт ещё не опубликован. React/MUI frontend поддерживает login/session, выбор ресторана и периода, сортировки, обе вкладки и обязательные состояния ошибок. Production не развёрнут. Оставшиеся функции и инфраструктурные задачи перечислены в `docs/backlog.md` и спецификациях `docs/specs/`.
+Сейчас реализованы health-срез, безопасная интеграция с источником, DB-backed очередь и worker, ручной admin-only sync API, Argon2id login с server-side sessions/CSRF, роли и администрирование менеджеров и ресторанов. Raw responses шифруются до записи, а полный импорт продаж и product/material AutoCost history атомарен и идемпотентен. Reports API считает рейтинги сотрудников и товаров, а для товаров также себестоимость проданных позиций, валовую маржу и покрытие продаж известной себестоимостью. React/MUI frontend поддерживает login/session, выбор ресторана и периода, сортировки, обе вкладки и обязательные состояния ошибок. Production не развёрнут. Оставшиеся функции и инфраструктурные задачи перечислены в `docs/backlog.md` и спецификациях `docs/specs/`.
 
 ## Локальный запуск
 
@@ -72,7 +72,7 @@ npm run lint
 npm run build
 ```
 
-`npm run test:e2e` собирает workspaces и запускает fake source, реальные NestJS API, отдельный worker, Vite и Chromium. Полный сценарий проверяет login → discovery/mapping ресторана → ручной import → обе таблицы рейтингов → создание и restaurant-scope менеджера. Нужна отдельная локальная PostgreSQL с применёнными миграциями (`npm run db:up && npm run db:migrate`); тест создаёт и удаляет только собственные синтетические данные.
+`npm run test:e2e` собирает workspaces и запускает fake source, реальные NestJS API, отдельный worker, Vite и Chromium. Полный сценарий проверяет login → discovery/mapping ресторана → ручной import → обе таблицы рейтингов, включая себестоимость, валовую маржу и coverage → создание и restaurant-scope менеджера. Нужна отдельная локальная PostgreSQL с применёнными миграциями (`npm run db:up && npm run db:migrate`); тест создаёт и удаляет только собственные синтетические данные.
 
 ## Что внутри
 
@@ -138,7 +138,7 @@ sh tests/test-template.sh
 
 ## Что ещё не включено
 
-- плановые импорты, cost/margin-отчёты, уведомления об изменении цен и автоматизация retention/deletion (см. `docs/backlog.md`);
+- плановые импорты, уведомления об изменении цен и автоматизация retention/deletion (см. `docs/backlog.md`);
 - универсальный Dockerfile;
 - CI/CD и deployment scripts;
 - настройки конкретной Jira, GitHub, GitLab или облака;
