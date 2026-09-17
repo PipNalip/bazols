@@ -30,6 +30,8 @@ function view(run: {
   productsCount: number;
   ordersCount: number;
   orderItemsCount: number;
+  productCostSnapshotsCount: number;
+  materialCostSnapshotsCount: number;
   safeErrorCode: string | null;
   createdAt: Date;
   startedAt: Date | null;
@@ -45,6 +47,8 @@ function view(run: {
     productsCount: run.productsCount,
     ordersCount: run.ordersCount,
     orderItemsCount: run.orderItemsCount,
+    productCostSnapshotsCount: run.productCostSnapshotsCount,
+    materialCostSnapshotsCount: run.materialCostSnapshotsCount,
     createdAt: run.createdAt,
     startedAt: run.startedAt,
     finishedAt: run.finishedAt,

@@ -10,7 +10,7 @@
 6. Follow the run in **Журнал запусков**:
    - `В очереди` — accepted by the API;
    - `Выполняется` — claimed by the worker;
-   - `Завершена` — normalized rows committed;
+   - `Завершена` — normalized sales and available AutoCost snapshots committed atomically;
    - `Ошибка` — previous successful reporting data remains active.
 7. After success, open **Рейтинги**. The screen polls an active synchronization and refreshes reports after completion.
 
@@ -27,6 +27,8 @@ Common categories:
 - `SYNC_STALE_RECOVERED`: a previous worker stopped; confirm there is one healthy worker before retrying.
 
 A failed import must not replace the last successful report. If the UI shows a failure warning with older rankings, that is the intended fallback.
+
+An empty successful AutoCost response means cost is unknown; it is not converted to zero. The current UI does not display cost or margin. Use the run's product/material cost counters only as operational evidence that snapshots were imported.
 
 ## Retry rules
 

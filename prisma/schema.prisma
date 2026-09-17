@@ -47,22 +47,25 @@ model Session {
 }
 
 model Restaurant {
-  id           String           @id @default(uuid()) @db.Uuid
-  sourceUnitId String           @unique
-  sourceRole   String
-  timezone     String
-  displayName  String
-  active       Boolean          @default(true)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  users        UserRestaurant[]
-  syncRuns     SyncRun[]
-  snapshots    RawSnapshot[]
-  employees    Employee[]
-  products     Product[]
-  orders       Order[]
-  orderItems   OrderItem[]
-  auditEvents  AuditEvent[]
+  id                    String                 @id @default(uuid()) @db.Uuid
+  sourceUnitId          String                 @unique
+  sourceRole            String
+  timezone              String
+  displayName           String
+  active                Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  users                 UserRestaurant[]
+  syncRuns              SyncRun[]
+  snapshots             RawSnapshot[]
+  employees             Employee[]
+  products              Product[]
+  materials             Material[]
+  productCostSnapshots  ProductCostSnapshot[]
+  materialCostSnapshots MaterialCostSnapshot[]
+  orders                Order[]
+  orderItems            OrderItem[]
+  auditEvents           AuditEvent[]
 }
 
 model UserRestaurant {
@@ -77,28 +80,32 @@ model UserRestaurant {
 }
 
 model SyncRun {
-  id                 String        @id @default(uuid()) @db.Uuid
-  restaurantId       String        @db.Uuid
-  beginDate          DateTime      @db.Date
-  endDate            DateTime      @db.Date
-  status             SyncRunStatus
-  requestedById      String        @db.Uuid
-  employeesCount     Int           @default(0)
-  ordersCount        Int           @default(0)
-  productsCount      Int           @default(0)
-  orderItemsCount    Int           @default(0)
-  safeErrorCode      String?
-  heartbeatAt        DateTime?
-  startedAt          DateTime?
-  finishedAt         DateTime?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  restaurant         Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
-  requestedBy        User          @relation(fields: [requestedById], references: [id], onDelete: Restrict)
-  snapshots          RawSnapshot[]
-  lastSeenOrders     Order[]       @relation("OrderLastSeenSync")
-  lastSeenOrderItems OrderItem[]   @relation("OrderItemLastSeenSync")
-  auditEvents        AuditEvent[]
+  id                         String                 @id @default(uuid()) @db.Uuid
+  restaurantId               String                 @db.Uuid
+  beginDate                  DateTime               @db.Date
+  endDate                    DateTime               @db.Date
+  status                     SyncRunStatus
+  requestedById              String                 @db.Uuid
+  employeesCount             Int                    @default(0)
+  ordersCount                Int                    @default(0)
+  productsCount              Int                    @default(0)
+  orderItemsCount            Int                    @default(0)
+  productCostSnapshotsCount  Int                    @default(0)
+  materialCostSnapshotsCount Int                    @default(0)
+  safeErrorCode              String?
+  heartbeatAt                DateTime?
+  startedAt                  DateTime?
+  finishedAt                 DateTime?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  restaurant                 Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  requestedBy                User                   @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+  snapshots                  RawSnapshot[]
+  lastSeenOrders             Order[]                @relation("OrderLastSeenSync")
+  lastSeenOrderItems         OrderItem[]            @relation("OrderItemLastSeenSync")
+  lastSeenProductCosts       ProductCostSnapshot[]  @relation("ProductCostLastSeenSync")
+  lastSeenMaterialCosts      MaterialCostSnapshot[] @relation("MaterialCostLastSeenSync")
+  auditEvents                AuditEvent[]
 
   @@unique([restaurantId, id])
   @@index([requestedById])
@@ -139,17 +146,80 @@ model Employee {
 }
 
 model Product {
-  id           String      @id @default(uuid()) @db.Uuid
-  restaurantId String      @db.Uuid
-  sourceId     String
-  displayName  String
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
-  orderItems   OrderItem[]
+  id            String                @id @default(uuid()) @db.Uuid
+  restaurantId  String                @db.Uuid
+  sourceId      String
+  displayName   String
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  restaurant    Restaurant            @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  orderItems    OrderItem[]
+  costSnapshots ProductCostSnapshot[]
 
   @@unique([restaurantId, sourceId])
   @@unique([restaurantId, id])
+}
+
+model Material {
+  id            String                 @id @default(uuid()) @db.Uuid
+  restaurantId  String                 @db.Uuid
+  sourceId      String
+  displayName   String
+  materialType  Int
+  unitOfMeasure Int
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  restaurant    Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  costSnapshots MaterialCostSnapshot[]
+
+  @@unique([restaurantId, sourceId])
+  @@unique([restaurantId, id])
+}
+
+model ProductCostSnapshot {
+  id                String     @id @default(uuid()) @db.Uuid
+  restaurantId      String     @db.Uuid
+  productId         String     @db.Uuid
+  lastSeenSyncRunId String     @db.Uuid
+  effectiveDate     DateTime   @db.Date
+  sourceUnitId      String
+  sourceTradeAreaId String
+  autoCost          Decimal    @db.Decimal(18, 6)
+  averageAutoCost   Decimal    @db.Decimal(18, 6)
+  reportedPrice     Decimal    @db.Decimal(18, 6)
+  fc                Decimal    @db.Decimal(18, 6)
+  extraCharge       Decimal    @db.Decimal(18, 6)
+  isTotalCost       Boolean
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  product           Product    @relation(fields: [restaurantId, productId], references: [restaurantId, id], onDelete: Restrict)
+  lastSeenSyncRun   SyncRun    @relation("ProductCostLastSeenSync", fields: [restaurantId, lastSeenSyncRunId], references: [restaurantId, id], onDelete: Restrict)
+
+  @@unique([restaurantId, productId, effectiveDate, sourceUnitId, sourceTradeAreaId])
+  @@index([lastSeenSyncRunId])
+  @@index([restaurantId, effectiveDate])
+}
+
+model MaterialCostSnapshot {
+  id                 String     @id @default(uuid()) @db.Uuid
+  restaurantId       String     @db.Uuid
+  materialId         String     @db.Uuid
+  lastSeenSyncRunId  String     @db.Uuid
+  effectiveDate      DateTime   @db.Date
+  sourceUnitId       String
+  sourceDepartmentId String
+  autoCost           Decimal    @db.Decimal(18, 6)
+  sourceCurrencyCode Int
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  restaurant         Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  material           Material   @relation(fields: [restaurantId, materialId], references: [restaurantId, id], onDelete: Restrict)
+  lastSeenSyncRun    SyncRun    @relation("MaterialCostLastSeenSync", fields: [restaurantId, lastSeenSyncRunId], references: [restaurantId, id], onDelete: Restrict)
+
+  @@unique([restaurantId, materialId, effectiveDate, sourceUnitId, sourceDepartmentId])
+  @@index([lastSeenSyncRunId])
+  @@index([restaurantId, effectiveDate])
 }
 
 model Order {

@@ -18,7 +18,7 @@ These items do not block local MVP implementation, tests, local Docker builds or
 
 ## Product follow-ups outside reporting MVP
 
-- Cost/margin source: read-only discovery confirmed official product/material AutoCost for issued unit/role contexts. Supply route access and an empty live envelope were confirmed, but the non-empty `Price`/`Tax` shape remains provisional because it comes only from a sanitized local snapshot. Implement issue #36 from product/material AutoCost with paginated snapshots, decimal money normalization, explicit context mapping and source-UI reconciliation; enable supply-price history only after a non-empty live contract is verified. See `docs/specs/bazols-product-data-discovery.md`.
+- Cost/margin reporting: issue #36 now imports restaurant-scoped product/material AutoCost history with strict pagination, decimal persistence and atomic publication. Reconcile AutoCost, reported product price and material currency against the source UI before calculating or displaying margin. Enable supply-price history only after a non-empty live contract is verified. See `docs/specs/bazols-cost-history.md` and `docs/specs/bazols-product-data-discovery.md`.
 - Price changes: current menu-price endpoints are forbidden for every issued unit/role checked. Obtain least-privilege read access or select another authoritative price feed, then define the notification baseline and channel.
 - Define data retention and deletion procedure.
 - Add scheduling only after manual synchronization is proven reliable.

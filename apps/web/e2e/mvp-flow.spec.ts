@@ -20,9 +20,12 @@ async function cleanupFixture() {
   const restaurants = await prisma.restaurant.findMany({ where: { sourceUnitId: { in: [sourceUnitId, otherSourceUnitId] } } });
   for (const restaurant of restaurants) {
     await prisma.auditEvent.deleteMany({ where: { OR: [{ restaurantId: restaurant.id }, { actorId: { in: userIds } }] } });
+    await prisma.productCostSnapshot.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.materialCostSnapshot.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.orderItem.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.order.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.product.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.material.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.employee.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.rawSnapshot.deleteMany({ where: { restaurantId: restaurant.id } });
     await prisma.syncRun.deleteMany({ where: { restaurantId: restaurant.id } });

@@ -5,12 +5,14 @@ import { Prisma } from '@prisma/client';
 import { ApplicationError } from '../common/application.error.js';
 import type { PrismaService } from '../db/prisma.service.js';
 import { SourceError } from '../source/source.errors.js';
-import { parseEmployeeRatingResponse } from '../source/source.schemas.js';
-import { normalizePages, type NormalizedPage } from './normalizer.js';
 import {
-  RawSnapshotRepository,
-  type StoreRawSnapshotInput,
-} from './raw-snapshot.repository.js';
+  parseEmployeeRatingResponse,
+  parseMaterialAutoCostsResponse,
+  parseProductAutoCostsResponse,
+} from '../source/source.schemas.js';
+import { normalizeCosts, type NormalizedCosts } from './cost-normalizer.js';
+import { normalizePages, type NormalizedPage } from './normalizer.js';
+import { RawSnapshotRepository, type StoreRawSnapshotInput } from './raw-snapshot.repository.js';
 
 export type RawImportPage = Omit<StoreRawSnapshotInput, 'syncRunId' | 'restaurantId'>;
 
@@ -21,11 +23,12 @@ export type ImportRunInput = {
   endDate: string;
   timezone: string;
   pages: RawImportPage[];
+  costPages?: RawImportPage[];
+  sourceUnitId?: string;
   markSucceeded?: boolean;
 };
 
 type RunIdentity = Pick<ImportRunInput, 'syncRunId' | 'restaurantId'>;
-
 const TRANSACTION_MAX_WAIT_MS = 10_000;
 const TRANSACTION_TIMEOUT_MS = 120_000;
 
@@ -47,7 +50,6 @@ export function periodBoundsUtc(
   if (!isValid(begin) || !isValid(end) || begin > end) {
     throw new SourceError('SOURCE_CONTRACT_INVALID');
   }
-
   try {
     const endExclusiveDate = format(addDays(end, 1), 'yyyy-MM-dd');
     const bounds = {
@@ -63,6 +65,8 @@ export function periodBoundsUtc(
   }
 }
 
+const EMPTY_COSTS: NormalizedCosts = { productCosts: [], materialCosts: [] };
+
 export class ImportPageService {
   constructor(
     private readonly prisma: PrismaService,
@@ -74,7 +78,7 @@ export class ImportPageService {
   }
 
   async importRun(input: ImportRunInput): Promise<void> {
-    for (const page of input.pages) {
+    for (const page of [...input.pages, ...(input.costPages ?? [])]) {
       await this.storeRawPage(input, page);
     }
     await this.importStoredRun(input);
@@ -84,13 +88,36 @@ export class ImportPageService {
     const normalized = normalizePages(
       input.pages.map((page) => parseEmployeeRatingResponse(parseBody(page.body))),
     );
-    const bounds = periodBoundsUtc(input.beginDate, input.endDate, input.timezone);
-    await this.#persistCompleteRun(input, normalized, bounds);
+    let costs = EMPTY_COSTS;
+    if (input.costPages) {
+      if (!input.sourceUnitId) throw new SourceError('SOURCE_CONTRACT_INVALID');
+      costs = normalizeCosts(
+        input.costPages
+          .filter((page) => page.endpoint === 'productAutoCosts')
+          .map((page) => parseProductAutoCostsResponse(parseBody(page.body))),
+        input.costPages
+          .filter((page) => page.endpoint === 'materialAutoCosts')
+          .map((page) => parseMaterialAutoCostsResponse(parseBody(page.body))),
+        {
+          sourceUnitId: input.sourceUnitId,
+          productDate: input.endDate,
+          beginDate: input.beginDate,
+          endDate: input.endDate,
+        },
+      );
+    }
+    await this.#persistCompleteRun(
+      input,
+      normalized,
+      costs,
+      periodBoundsUtc(input.beginDate, input.endDate, input.timezone),
+    );
   }
 
   async #persistCompleteRun(
     input: ImportRunInput,
     normalized: NormalizedPage,
+    costs: NormalizedCosts,
     bounds: { begin: Date; endExclusive: Date },
   ): Promise<void> {
     await this.prisma.$transaction(async (transaction) => {
@@ -115,48 +142,24 @@ export class ImportPageService {
         restaurantId: input.restaurantId,
         occurredAt: { gte: bounds.begin, lt: bounds.endExclusive },
       };
-
       if (normalized.orders.length === 0) {
-        const currentCount = await transaction.order.count({
-          where: { ...period, isCurrent: true },
-        });
-        if (currentCount > 0) {
-          throw new SourceError('SOURCE_EMPTY_UNEXPECTED');
-        }
-        await transaction.syncRun.update({
-          where: { id: input.syncRunId },
-          data: {
-            employeesCount: 0,
-            productsCount: 0,
-            ordersCount: 0,
-            orderItemsCount: 0,
-            ...(input.markSucceeded
-              ? { status: 'SUCCEEDED' as const, finishedAt: new Date(), safeErrorCode: null }
-              : {}),
-          },
-        });
-        if (lockedRun) {
-          await transaction.auditEvent.create({
-            data: {
-              actorId: lockedRun.requestedById,
-              eventType: 'SYNC_SUCCEEDED',
-              restaurantId: lockedRun.restaurantId,
-              syncRunId: lockedRun.id,
-              correlationId: `worker:${lockedRun.id}`,
-            },
-          });
-        }
-        return;
+        const currentCount = await transaction.order.count({ where: { ...period, isCurrent: true } });
+        if (currentCount > 0) throw new SourceError('SOURCE_EMPTY_UNEXPECTED');
+      }
+
+      const productNames = new Map<string, string>();
+      for (const product of normalized.products) productNames.set(product.sourceId, product.displayName);
+      for (const cost of costs.productCosts) {
+        const existing = productNames.get(cost.productSourceId);
+        if (existing && existing !== cost.productName) throw new SourceError('SOURCE_DUPLICATE_ID');
+        productNames.set(cost.productSourceId, cost.productName);
       }
 
       const employees = new Map<string, string>();
       for (const employee of normalized.employees) {
         const record = await transaction.employee.upsert({
           where: {
-            restaurantId_sourceId: {
-              restaurantId: input.restaurantId,
-              sourceId: employee.sourceId,
-            },
+            restaurantId_sourceId: { restaurantId: input.restaurantId, sourceId: employee.sourceId },
           },
           create: {
             restaurantId: input.restaurantId,
@@ -169,36 +172,22 @@ export class ImportPageService {
       }
 
       const products = new Map<string, string>();
-      for (const product of normalized.products) {
+      for (const [sourceId, displayName] of productNames) {
         const record = await transaction.product.upsert({
-          where: {
-            restaurantId_sourceId: {
-              restaurantId: input.restaurantId,
-              sourceId: product.sourceId,
-            },
-          },
-          create: {
-            restaurantId: input.restaurantId,
-            sourceId: product.sourceId,
-            displayName: product.displayName,
-          },
-          update: { displayName: product.displayName },
+          where: { restaurantId_sourceId: { restaurantId: input.restaurantId, sourceId } },
+          create: { restaurantId: input.restaurantId, sourceId, displayName },
+          update: { displayName },
         });
-        products.set(product.sourceId, record.id);
+        products.set(sourceId, record.id);
       }
 
       const orders = new Map<string, string>();
       for (const order of normalized.orders) {
         const employeeId = employees.get(order.employeeSourceId);
-        if (!employeeId) {
-          throw new SourceError('SOURCE_CONTRACT_INVALID');
-        }
+        if (!employeeId) throw new SourceError('SOURCE_CONTRACT_INVALID');
         const record = await transaction.order.upsert({
           where: {
-            restaurantId_sourceId: {
-              restaurantId: input.restaurantId,
-              sourceId: order.sourceId,
-            },
+            restaurantId_sourceId: { restaurantId: input.restaurantId, sourceId: order.sourceId },
           },
           create: {
             restaurantId: input.restaurantId,
@@ -224,15 +213,10 @@ export class ImportPageService {
       for (const item of normalized.items) {
         const orderId = orders.get(item.orderSourceId);
         const productId = products.get(item.productSourceId);
-        if (!orderId || !productId) {
-          throw new SourceError('SOURCE_CONTRACT_INVALID');
-        }
+        if (!orderId || !productId) throw new SourceError('SOURCE_CONTRACT_INVALID');
         await transaction.orderItem.upsert({
           where: {
-            restaurantId_sourceId: {
-              restaurantId: input.restaurantId,
-              sourceId: item.sourceId,
-            },
+            restaurantId_sourceId: { restaurantId: input.restaurantId, sourceId: item.sourceId },
           },
           create: {
             restaurantId: input.restaurantId,
@@ -254,26 +238,99 @@ export class ImportPageService {
         });
       }
 
-      const periodOrders = await transaction.order.findMany({
-        where: period,
-        select: { id: true },
-      });
-      const periodOrderIds = periodOrders.map((order) => order.id);
-      await transaction.orderItem.updateMany({
-        where: {
+      const materials = new Map<string, string>();
+      for (const cost of costs.materialCosts) {
+        const record = await transaction.material.upsert({
+          where: {
+            restaurantId_sourceId: {
+              restaurantId: input.restaurantId,
+              sourceId: cost.materialSourceId,
+            },
+          },
+          create: {
+            restaurantId: input.restaurantId,
+            sourceId: cost.materialSourceId,
+            displayName: cost.materialName,
+            materialType: cost.materialType,
+            unitOfMeasure: cost.unitOfMeasure,
+          },
+          update: {
+            displayName: cost.materialName,
+            materialType: cost.materialType,
+            unitOfMeasure: cost.unitOfMeasure,
+          },
+        });
+        materials.set(cost.materialSourceId, record.id);
+      }
+
+      for (const cost of costs.productCosts) {
+        const productId = products.get(cost.productSourceId);
+        if (!productId) throw new SourceError('SOURCE_CONTRACT_INVALID');
+        const identity = {
           restaurantId: input.restaurantId,
-          orderId: { in: periodOrderIds },
-          lastSeenSyncRunId: { not: input.syncRunId },
-        },
-        data: { isCurrent: false },
-      });
-      await transaction.order.updateMany({
-        where: {
-          ...period,
-          lastSeenSyncRunId: { not: input.syncRunId },
-        },
-        data: { isCurrent: false },
-      });
+          productId,
+          effectiveDate: cost.effectiveDate,
+          sourceUnitId: cost.sourceUnitId,
+          sourceTradeAreaId: cost.sourceTradeAreaId,
+        };
+        const values = {
+          autoCost: cost.autoCost,
+          averageAutoCost: cost.averageAutoCost,
+          reportedPrice: cost.reportedPrice,
+          fc: cost.fc,
+          extraCharge: cost.extraCharge,
+          isTotalCost: cost.isTotalCost,
+          lastSeenSyncRunId: input.syncRunId,
+        };
+        await transaction.productCostSnapshot.upsert({
+          where: {
+            restaurantId_productId_effectiveDate_sourceUnitId_sourceTradeAreaId: identity,
+          },
+          create: { ...identity, ...values },
+          update: values,
+        });
+      }
+
+      for (const cost of costs.materialCosts) {
+        const materialId = materials.get(cost.materialSourceId);
+        if (!materialId) throw new SourceError('SOURCE_CONTRACT_INVALID');
+        const identity = {
+          restaurantId: input.restaurantId,
+          materialId,
+          effectiveDate: cost.effectiveDate,
+          sourceUnitId: cost.sourceUnitId,
+          sourceDepartmentId: cost.sourceDepartmentId,
+        };
+        const values = {
+          autoCost: cost.autoCost,
+          sourceCurrencyCode: cost.sourceCurrencyCode,
+          lastSeenSyncRunId: input.syncRunId,
+        };
+        await transaction.materialCostSnapshot.upsert({
+          where: {
+            restaurantId_materialId_effectiveDate_sourceUnitId_sourceDepartmentId: identity,
+          },
+          create: { ...identity, ...values },
+          update: values,
+        });
+      }
+
+      if (normalized.orders.length > 0) {
+        const periodOrders = await transaction.order.findMany({ where: period, select: { id: true } });
+        const periodOrderIds = periodOrders.map((order) => order.id);
+        await transaction.orderItem.updateMany({
+          where: {
+            restaurantId: input.restaurantId,
+            orderId: { in: periodOrderIds },
+            lastSeenSyncRunId: { not: input.syncRunId },
+          },
+          data: { isCurrent: false },
+        });
+        await transaction.order.updateMany({
+          where: { ...period, lastSeenSyncRunId: { not: input.syncRunId } },
+          data: { isCurrent: false },
+        });
+      }
 
       await transaction.syncRun.update({
         where: { id: input.syncRunId },
@@ -282,6 +339,8 @@ export class ImportPageService {
           productsCount: normalized.products.length,
           ordersCount: normalized.orders.length,
           orderItemsCount: normalized.items.length,
+          productCostSnapshotsCount: costs.productCosts.length,
+          materialCostSnapshotsCount: costs.materialCosts.length,
           ...(input.markSucceeded
             ? { status: 'SUCCEEDED' as const, finishedAt: new Date(), safeErrorCode: null }
             : {}),
@@ -298,9 +357,6 @@ export class ImportPageService {
           },
         });
       }
-    }, {
-      maxWait: TRANSACTION_MAX_WAIT_MS,
-      timeout: TRANSACTION_TIMEOUT_MS,
-    });
+    }, { maxWait: TRANSACTION_MAX_WAIT_MS, timeout: TRANSACTION_TIMEOUT_MS });
   }
 }

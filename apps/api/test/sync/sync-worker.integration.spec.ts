@@ -18,9 +18,12 @@ const prisma = new PrismaService(databaseUrl);
 
 async function clearDatabase(): Promise<void> {
   await prisma.auditEvent.deleteMany();
+  await prisma.productCostSnapshot.deleteMany();
+  await prisma.materialCostSnapshot.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.material.deleteMany();
   await prisma.employee.deleteMany();
   await prisma.rawSnapshot.deleteMany();
   await prisma.syncRun.deleteMany();
@@ -30,7 +33,7 @@ async function clearDatabase(): Promise<void> {
   await prisma.user.deleteMany();
 }
 
-async function createContext(): Promise<{
+async function createContext(sourceUnitId = 'queue-unit'): Promise<{
   requestedById: string;
   restaurantId: string;
   correlationId: string;
@@ -40,7 +43,7 @@ async function createContext(): Promise<{
   });
   const restaurant = await prisma.restaurant.create({
     data: {
-      sourceUnitId: 'queue-unit',
+      sourceUnitId,
       sourceRole: 'SYNTHETIC_REPORT_VIEWER',
       timezone: 'UTC',
       displayName: 'Queue Restaurant',
@@ -225,8 +228,110 @@ describe('SyncWorker', () => {
         productsCount: 2,
         ordersCount: 3,
         orderItemsCount: 4,
+        productCostSnapshotsCount: 1,
+        materialCostSnapshotsCount: 1,
       });
-      await expect(prisma.rawSnapshot.count({ where: { syncRunId: queued.id } })).resolves.toBe(1);
+      await expect(prisma.rawSnapshot.count({ where: { syncRunId: queued.id } })).resolves.toBe(3);
+      await expect(prisma.productCostSnapshot.count()).resolves.toBe(1);
+      await expect(prisma.materialCostSnapshot.count()).resolves.toBe(1);
+      await expect(prisma.productCostSnapshot.findFirstOrThrow()).resolves.toMatchObject({
+        effectiveDate: new Date('2026-09-30T00:00:00.000Z'),
+        sourceUnitId: '10000000-0000-4000-8000-000000000001',
+      });
+      expect((await prisma.productCostSnapshot.findFirstOrThrow()).autoCost.toFixed(6)).toBe(
+        '120.500001',
+      );
+      expect((await prisma.materialCostSnapshot.findFirstOrThrow()).autoCost.toFixed(6)).toBe(
+        '42.250000',
+      );
+
+      const repeated = await repository.enqueue({
+        restaurantId: restaurant.id,
+        requestedById: user.id,
+        beginDate: new Date('2026-09-01T00:00:00.000Z'),
+        endDate: new Date('2026-09-30T00:00:00.000Z'),
+        correlationId: 'worker-pipeline-repeat',
+      });
+      await expect(worker.runOnce()).resolves.toBe(true);
+      await expect(prisma.productCostSnapshot.count()).resolves.toBe(1);
+      await expect(prisma.materialCostSnapshot.count()).resolves.toBe(1);
+      await expect(prisma.productCostSnapshot.findFirstOrThrow()).resolves.toMatchObject({
+        lastSeenSyncRunId: repeated.id,
+      });
+    } finally {
+      await source.close();
+    }
+  });
+
+  it('keeps costs unknown when both cost feeds are empty', async () => {
+    const source = await startFakeSource({ emptyCosts: true });
+    try {
+      const context = await createContext('10000000-0000-4000-8000-000000000001');
+      const repository = new SyncRunRepository(prisma);
+      const queued = await repository.enqueue({
+        ...context,
+        beginDate: new Date('2026-09-01T00:00:00.000Z'),
+        endDate: new Date('2026-09-30T00:00:00.000Z'),
+      });
+      const worker = new SyncWorker(
+        repository,
+        new SourceSyncProcessor(
+          prisma,
+          new SourceConnectorFactory({
+            baseUrl: source.url,
+            login: 'source-login',
+            password: 'source-password',
+            allowInsecureForTests: true,
+          }),
+          new ImportPageService(prisma, new RawSnapshotRepository(prisma, Buffer.alloc(32, 24))),
+        ),
+      );
+
+      await expect(worker.runOnce()).resolves.toBe(true);
+      await expect(prisma.syncRun.findUniqueOrThrow({ where: { id: queued.id } })).resolves.toMatchObject({
+        status: 'SUCCEEDED',
+        productCostSnapshotsCount: 0,
+        materialCostSnapshotsCount: 0,
+      });
+      await expect(prisma.productCostSnapshot.count()).resolves.toBe(0);
+      await expect(prisma.materialCostSnapshot.count()).resolves.toBe(0);
+    } finally {
+      await source.close();
+    }
+  });
+
+  it('retains raw evidence but publishes no normalized data when costs are malformed', async () => {
+    const source = await startFakeSource({ malformedCosts: true });
+    try {
+      const context = await createContext('10000000-0000-4000-8000-000000000001');
+      const repository = new SyncRunRepository(prisma);
+      const queued = await repository.enqueue({
+        ...context,
+        beginDate: new Date('2026-09-01T00:00:00.000Z'),
+        endDate: new Date('2026-09-30T00:00:00.000Z'),
+      });
+      const worker = new SyncWorker(
+        repository,
+        new SourceSyncProcessor(
+          prisma,
+          new SourceConnectorFactory({
+            baseUrl: source.url,
+            login: 'source-login',
+            password: 'source-password',
+            allowInsecureForTests: true,
+          }),
+          new ImportPageService(prisma, new RawSnapshotRepository(prisma, Buffer.alloc(32, 25))),
+        ),
+      );
+
+      await expect(worker.runOnce()).resolves.toBe(true);
+      await expect(prisma.syncRun.findUniqueOrThrow({ where: { id: queued.id } })).resolves.toMatchObject({
+        status: 'FAILED',
+        safeErrorCode: 'SOURCE_CONTRACT_INVALID',
+      });
+      await expect(prisma.rawSnapshot.count({ where: { syncRunId: queued.id } })).resolves.toBe(2);
+      await expect(prisma.order.count()).resolves.toBe(0);
+      await expect(prisma.productCostSnapshot.count()).resolves.toBe(0);
     } finally {
       await source.close();
     }
